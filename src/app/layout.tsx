@@ -5,6 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { Providers } from "@/components/Providers";
 import { SITE_CONFIG } from "@/lib/seo-config";
 import Link from "next/link";
+import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -126,6 +127,7 @@ export default function RootLayout({
             </div>
           </footer>
         </Providers>
+        <Analytics />
       </body>
     </html>
   );
