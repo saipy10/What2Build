@@ -12,6 +12,8 @@
     "@ai-sdk/openai": "^4.0.109",
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^6.19.3",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.119.0",
     "@types/pg": "^8.23.1",
     "ai": "^7.0.163",
     "cheerio": "^1.2.0",
