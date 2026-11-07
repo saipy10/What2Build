@@ -11,8 +11,6 @@ export function AppBulbLogo({ className = "w-6 h-6", size, ...props }: LogoProps
       role="img"
       viewBox="0 0 24 24"
       fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
       width={size}
@@ -21,13 +19,13 @@ export function AppBulbLogo({ className = "w-6 h-6", size, ...props }: LogoProps
       {...props}
     >
       <title>What2Build</title>
-      {/* Bulb sphere with bottom neck closed, no lower screw lines */}
-      <path d="M9 19h6" />
-      <path d="M15 19c0-1.5 1.5-3 2.5-4.5 1-1.5 1.5-3.5 1.5-5.5a7 7 0 1 0-14 0c0 2 0.5 4 1.5 5.5 1 1.5 2.5 3 2.5 4.5" />
-      {/* </> code symbol inside sphere */}
-      <path d="m8.5 9-2 2 2 2" />
-      <path d="m15.5 9 2 2-2 2" />
-      <path d="m13 7.5-2 7" />
+      {/* Bulb sphere with bottom neck closed, no lower screw lines — greyish */}
+      <path d="M9 19h6" stroke="#9ca3af" strokeWidth="2.2" />
+      <path d="M15 19c0-1.5 1.5-3 2.5-4.5 1-1.5 1.5-3.5 1.5-5.5a7 7 0 1 0-14 0c0 2 0.5 4 1.5 5.5 1 1.5 2.5 3 2.5 4.5" stroke="#9ca3af" strokeWidth="2.2" />
+      {/* </> code symbol inside sphere — greenish */}
+      <path d="m8.5 9-2 2 2 2" stroke="#22c55e" strokeWidth="1.8" />
+      <path d="m15.5 9 2 2-2 2" stroke="#22c55e" strokeWidth="1.8" />
+      <path d="m13 7.5-2 7" stroke="#4ade80" strokeWidth="1.8" />
     </svg>
   );
 }
