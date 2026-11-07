@@ -1,152 +1,116 @@
-"use client";
-
-import React, { useState } from "react";
-import { ArrowRight, X } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import React from "react";
+import type { Metadata } from "next";
 import { SUPPORTED_COMPANIES } from "@/lib/companies";
-import { CompanyCard } from "@/components/CompanyCard";
-import { Reveal, StaggerContainer, StaggerItem } from "@/components/Reveal";
+import { SITE_CONFIG } from "@/lib/seo-config";
+import { HomeClient } from "@/components/HomeClient";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { FaqItem } from "@/components/FaqSection";
+
+export const metadata: Metadata = {
+  title: `${SITE_CONFIG.name} | ${SITE_CONFIG.tagline}`,
+  description: SITE_CONFIG.description,
+  alternates: {
+    canonical: SITE_CONFIG.url,
+  },
+  openGraph: {
+    title: `${SITE_CONFIG.name} | ${SITE_CONFIG.tagline}`,
+    description: SITE_CONFIG.description,
+    url: SITE_CONFIG.url,
+    siteName: SITE_CONFIG.name,
+    locale: SITE_CONFIG.locale,
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_CONFIG.name} | ${SITE_CONFIG.tagline}`,
+    description: SITE_CONFIG.description,
+  },
+};
+
+const HOME_FAQS: FaqItem[] = [
+  {
+    question: "What is What2Build and who is it designed for?",
+    answer:
+      "What2Build is an open engineering portal for software developers, ML engineers, and computer science students. It continuously tracks newly published research papers and technical blogs from frontier AI organizations (like OpenAI, Google DeepMind, Anthropic, and Meta) and converts them into practical, step-by-step engineering projects.",
+  },
+  {
+    question: "How does What2Build generate project ideas from AI research papers?",
+    answer:
+      "Our system reads official preprints from arXiv and engineering blog feeds, extracts core algorithmic innovations and architectures, and utilizes state-of-the-art language models to produce 3 structured project specifications categorized by difficulty: Beginner (proofs-of-concept), Intermediate (evaluations and microservices), and Advanced (distributed systems and custom architectures).",
+  },
+  {
+    question: "Which frontier AI labs and companies are currently supported?",
+    answer:
+      "We currently monitor top tier AI labs including OpenAI, Google DeepMind, Anthropic, Meta AI, Mistral AI, Cohere, Microsoft Research, Apple Machine Learning, and NVIDIA Research.",
+  },
+  {
+    question: "Are the suggested project ideas suitable for developer portfolios?",
+    answer:
+      "Yes. Each project idea provides recommended tech stacks, core architectural challenges, concrete deliverables, and extension opportunities designed to demonstrate production engineering skills to hiring managers and technical recruiters.",
+  },
+  {
+    question: "Is What2Build free to use?",
+    answer:
+      "Yes, What2Build is freely accessible to explore research feeds and view AI-generated project plans for developers building portfolio projects.",
+  },
+  {
+    question: "Can I filter between academic research papers and engineering blog posts?",
+    answer:
+      "Yes. On every company hub page, you can toggle between 'Engineering Blogs' (real-world system architecture, scaling posts) and 'Research Papers' (peer-reviewed papers and arXiv preprints).",
+  },
+];
 
 export default function HomePage() {
   const companies = Object.values(SUPPORTED_COMPANIES);
-  const [showHowItWorks, setShowHowItWorks] = useState(false);
+
+  // Structured Data Schema for Organization, WebSite, and FAQPage
+  const jsonLdItems = [
+    {
+      "@type": "Organization",
+      "@id": `${SITE_CONFIG.url}/#organization`,
+      name: SITE_CONFIG.name,
+      url: SITE_CONFIG.url,
+      description: SITE_CONFIG.description,
+      logo: `${SITE_CONFIG.url}/favicon.svg`,
+      sameAs: [SITE_CONFIG.social.github, SITE_CONFIG.social.twitter],
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_CONFIG.url}/#website`,
+      name: SITE_CONFIG.name,
+      url: SITE_CONFIG.url,
+      publisher: {
+        "@id": `${SITE_CONFIG.url}/#organization`,
+      },
+      potentialAction: {
+        "@type": "SearchAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: `${SITE_CONFIG.url}/companies/{search_term_string}`,
+        },
+        "query-input": "required name=search_term_string",
+      },
+    },
+    {
+      "@type": "FAQPage",
+      "@id": `${SITE_CONFIG.url}/#faq`,
+      mainEntity: HOME_FAQS.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: faq.answer,
+        },
+      })),
+    },
+  ];
 
   return (
-    <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-      {/* Subtle hero dot grid at <=4% opacity */}
-      <div
-        className="pointer-events-none absolute inset-0 -z-10 [background-image:radial-gradient(currentColor_1px,transparent_1px)] [background-size:24px_24px] text-foreground opacity-[0.035]"
-        aria-hidden="true"
-      />
-
-      {/* Hero Section */}
-      <section className="mb-20 sm:mb-24 max-w-3xl">
-        <Reveal>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-[-0.02em] text-foreground leading-[1.1]">
-            Turn engineering breakthroughs into projects you can build.
-          </h1>
-        </Reveal>
-
-        <Reveal delay={0.06}>
-          <p className="mt-5 text-base sm:text-lg text-muted-foreground leading-relaxed">
-            Pick a company, explore its engineering blogs and research, and generate project ideas from beginner to advanced.
-          </p>
-        </Reveal>
-
-        <Reveal delay={0.12}>
-          <div className="mt-8 flex flex-wrap items-center gap-4">
-            <a
-              href="#companies"
-              className="inline-flex items-center gap-2 rounded-lg bg-foreground text-background px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
-            >
-              <span>Explore companies</span>
-              <ArrowRight className="h-4 w-4" />
-            </a>
-
-            <button
-              type="button"
-              onClick={() => setShowHowItWorks(true)}
-              className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-            >
-              How it works
-            </button>
-          </div>
-        </Reveal>
-      </section>
-
-      {/* Companies Grid Section */}
-      <section id="companies" className="scroll-mt-20">
-        <Reveal className="mb-8">
-          <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
-            Companies &amp; Engineering Blogs
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {companies.length} prominent engineering organizations and research labs
-          </p>
-        </Reveal>
-
-        <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {companies.map((comp) => (
-            <StaggerItem key={comp.slug} className="h-full">
-              <CompanyCard
-                name={comp.name}
-                slug={comp.slug}
-                tagline={comp.tagline}
-                description={comp.description}
-              />
-            </StaggerItem>
-          ))}
-        </StaggerContainer>
-      </section>
-
-      {/* How it works modal / popover */}
-      <AnimatePresence>
-        {showHowItWorks && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-background/80 backdrop-blur-xs"
-              onClick={() => setShowHowItWorks(false)}
-            />
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 10 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="relative w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl z-10"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="how-it-works-title"
-            >
-              <div className="flex items-center justify-between pb-4 border-b border-border">
-                <h3 id="how-it-works-title" className="text-base font-semibold text-foreground">
-                  How it works
-                </h3>
-                <button
-                  type="button"
-                  aria-label="Close dialog"
-                  onClick={() => setShowHowItWorks(false)}
-                  className="rounded-md p-1 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="mt-5 space-y-4 text-sm">
-                <div className="flex items-start gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-surface-elevated border border-border text-xs font-mono font-medium text-foreground">
-                    1
-                  </span>
-                  <p className="text-muted-foreground pt-0.5">
-                    <strong className="text-foreground font-medium">Select a company:</strong> Choose an engineering organization like Netflix, Discord, Vercel, Hugging Face, OpenAI, or Meta.
-                  </p>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-surface-elevated border border-border text-xs font-mono font-medium text-foreground">
-                    2
-                  </span>
-                  <p className="text-muted-foreground pt-0.5">
-                    <strong className="text-foreground font-medium">Browse publications:</strong> Read engineering blogs and technical research papers.
-                  </p>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-surface-elevated border border-border text-xs font-mono font-medium text-foreground">
-                    3
-                  </span>
-                  <p className="text-muted-foreground pt-0.5">
-                    <strong className="text-foreground font-medium">Generate project ideas:</strong> Get three practical blueprints with deliverables, difficulty levels, and tech stacks.
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </div>
+    <>
+      <JsonLd items={jsonLdItems} />
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+        <HomeClient companies={companies} faqs={HOME_FAQS} />
+      </div>
+    </>
   );
 }
