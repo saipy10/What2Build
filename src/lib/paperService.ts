@@ -8,7 +8,8 @@ const CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
 export async function getCompanyPapers(
   companySlug: string,
   forceRefresh = false,
-  filterType: "all" | "blog" | "research" = "blog"
+  filterType: "all" | "blog" | "research" = "blog",
+  limit = 20
 ) {
   const config = SUPPORTED_COMPANIES[companySlug];
   if (!config) {
@@ -56,7 +57,7 @@ export async function getCompanyPapers(
           .select("*")
           .eq("company_id", companyId)
           .order("published_at", { ascending: false })
-          .limit(15);
+          .limit(limit);
 
         const hasValidCache =
           !forceRefresh &&
@@ -82,10 +83,11 @@ export async function getCompanyPapers(
           }));
         }
 
-        // Fetch fresh papers from source
+        // Fetch fresh papers from source (fetch up to requested limit or 20)
+        const fetchCount = Math.max(limit, 20);
         const discovered: DiscoveredPaper[] = isResearchOnly
-          ? await fetchArxivPapers(companySlug, 10)
-          : await fetchCompanyBlogs(companySlug, 10);
+          ? await fetchArxivPapers(companySlug, fetchCount)
+          : await fetchCompanyBlogs(companySlug, fetchCount);
 
         if (discovered.length > 0) {
           const rowsToUpsert = discovered.map((p) => ({
@@ -114,7 +116,7 @@ export async function getCompanyPapers(
             .select("*")
             .eq("company_id", companyId)
             .order("published_at", { ascending: false })
-            .limit(10);
+            .limit(limit);
 
           if (refreshedPapers && refreshedPapers.length > 0) {
             return refreshedPapers.map((p) => ({
@@ -160,12 +162,13 @@ export async function getCompanyPapers(
     Date.now() - lastRefreshed.getTime() < CACHE_TTL_MS;
 
   if (isFresh) {
-    return cachedPapers.slice(0, 10);
+    return cachedPapers.slice(0, limit);
   }
 
+  const fetchCount = Math.max(limit, 20);
   const discovered: DiscoveredPaper[] = isResearchOnly
-    ? await fetchArxivPapers(companySlug, 10)
-    : await fetchCompanyBlogs(companySlug, 10);
+    ? await fetchArxivPapers(companySlug, fetchCount)
+    : await fetchCompanyBlogs(companySlug, fetchCount);
 
   const memoryPapers = discovered.map((p, idx) => ({
     id: `${companySlug}-${filterType}-${idx}-${Buffer.from(p.sourceUrl).toString("base64").slice(0, 12)}`,
@@ -185,7 +188,7 @@ export async function getCompanyPapers(
   memoryDb.savePapers(memoryPapers);
   memoryDb.setLastRefreshed(cacheKey, new Date());
 
-  return memoryPapers.slice(0, 10);
+  return memoryPapers.slice(0, limit);
 }
 
 export async function getPaperById(paperId: string) {

@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Terminal, Search, ChevronDown, X } from "lucide-react";
+import { Search, ChevronDown, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { SUPPORTED_COMPANIES } from "@/lib/companies";
-import { CompanyLogo } from "@/components/CompanyLogos";
+import { CompanyLogo, GitHubLogo } from "@/components/CompanyLogos";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Navbar() {
@@ -76,12 +77,19 @@ export function Navbar() {
         <div className="flex items-center gap-3 sm:gap-4 flex-1 max-w-lg">
           <Link
             href="/"
-            className="flex items-center gap-2.5 text-foreground hover:opacity-85 transition-opacity shrink-0"
+            className="flex items-center gap-2 text-foreground hover:opacity-85 transition-opacity shrink-0"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface border border-border shadow-xs text-foreground">
-              <Terminal className="h-4 w-4 text-accent" />
+            <div className="relative flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden border border-border shadow-xs bg-surface shrink-0">
+              <Image
+                src="/images/logo.png"
+                alt="What2Build Logo"
+                width={32}
+                height={32}
+                className="w-full h-full object-contain"
+                priority
+              />
             </div>
-            <span className="font-semibold tracking-tight text-foreground text-sm sm:text-base hidden xs:inline">
+            <span className="font-semibold tracking-tight text-foreground text-sm sm:text-base inline">
               What2Build
             </span>
           </Link>
@@ -181,12 +189,13 @@ export function Navbar() {
             All Companies
           </Link>
           <a
-            href={process.env.NEXT_PUBLIC_REPO_URL || "https://github.com"}
+            href={process.env.NEXT_PUBLIC_REPO_URL || "https://github.com/saipy10/What2Build"}
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden md:inline text-xs sm:text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="GitHub Repository"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-elevated transition-colors"
           >
-            GitHub
+            <GitHubLogo className="h-4 w-4" />
           </a>
           <ThemeToggle />
         </div>

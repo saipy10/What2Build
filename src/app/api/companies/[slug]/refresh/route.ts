@@ -19,9 +19,10 @@ export async function POST(
 
     const { searchParams } = new URL(request.url);
     const filter = (searchParams.get("filter") || "blog") as "blog" | "research";
+    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "10", 10), 5), 50);
 
     // Force discovery refresh with the requested filter
-    const papers = await getCompanyPapers(slug.toLowerCase(), true, filter);
+    const papers = await getCompanyPapers(slug.toLowerCase(), true, filter, limit);
 
     return NextResponse.json({
       success: true,

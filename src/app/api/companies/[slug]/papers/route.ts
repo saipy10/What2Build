@@ -19,8 +19,9 @@ export async function GET(
 
     const { searchParams } = new URL(request.url);
     const filter = (searchParams.get("filter") || "blog") as "blog" | "research";
+    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "10", 10), 5), 50);
 
-    const papers = await getCompanyPapers(slug.toLowerCase(), false, filter);
+    const papers = await getCompanyPapers(slug.toLowerCase(), false, filter, limit);
 
     return NextResponse.json({
       success: true,

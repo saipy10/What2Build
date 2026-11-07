@@ -36,25 +36,29 @@ export default function CompanyResearchPage({
 
   const [company, setCompany] = useState<CompanyMeta | null>(null);
   const [papers, setPapers] = useState<PaperData[]>([]);
+  const [visibleCount, setVisibleCount] = useState(5);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filterMode, setFilterMode] = useState<"blog" | "research">("blog");
 
   const fetchPapers = useCallback(
-    async (force = false, filterOverride?: "blog" | "research") => {
+    async (force = false, filterOverride?: "blog" | "research", requestedLimit = 10) => {
       const activeFilter = filterOverride || filterMode;
       try {
         if (force) {
           setRefreshing(true);
+        } else if (requestedLimit > 10) {
+          setLoadingMore(true);
         } else {
           setLoading(true);
         }
         setError(null);
 
         const endpoint = force
-          ? `/api/companies/${companySlug}/refresh?filter=${activeFilter}`
-          : `/api/companies/${companySlug}/papers?filter=${activeFilter}`;
+          ? `/api/companies/${companySlug}/refresh?filter=${activeFilter}&limit=${requestedLimit}`
+          : `/api/companies/${companySlug}/papers?filter=${activeFilter}&limit=${requestedLimit}`;
 
         const method = force ? "POST" : "GET";
         const res = await fetch(endpoint, { method });
@@ -66,11 +70,13 @@ export default function CompanyResearchPage({
           );
         }
 
-        setPapers(data.papers || []);
+        const fetchedPapers: PaperData[] = data.papers || [];
+        setPapers(fetchedPapers);
         if (data.company) {
           setCompany(data.company);
         }
         if (force) {
+          setVisibleCount(5);
           toast.success("Feed refreshed with latest publications");
         }
       } catch (err: unknown) {
@@ -85,16 +91,30 @@ export default function CompanyResearchPage({
       } finally {
         setLoading(false);
         setRefreshing(false);
+        setLoadingMore(false);
       }
     },
     [companySlug, filterMode]
   );
 
+  const handleShowMore = async () => {
+    // If we have more already fetched in state than currently shown
+    if (visibleCount < papers.length) {
+      setVisibleCount((prev) => Math.min(prev + 5, papers.length));
+    } else {
+      // Need to fetch 10 more from backend
+      const nextTotalLimit = papers.length + 10;
+      await fetchPapers(false, filterMode, nextTotalLimit);
+      setVisibleCount((prev) => prev + 5);
+    }
+  };
+
   useEffect(() => {
     let ignore = false;
     async function load() {
       if (!ignore) {
-        await fetchPapers(false, filterMode);
+        setVisibleCount(5);
+        await fetchPapers(false, filterMode, 10);
       }
     }
     load();
@@ -275,13 +295,37 @@ export default function CompanyResearchPage({
               transition={{ duration: 0.2, ease: "easeOut" }}
               className="space-y-4"
             >
-              {papers.map((paper) => (
+              {papers.slice(0, visibleCount).map((paper) => (
                 <PaperCard
                   key={paper.id || paper.sourceUrl}
                   paper={paper}
                   companySlug={companySlug}
                 />
               ))}
+
+              {/* Show more / Load more button */}
+              <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground border-t border-border/60">
+                <span>
+                  Showing {Math.min(visibleCount, papers.length)} of {papers.length} loaded publications
+                </span>
+                <button
+                  type="button"
+                  onClick={handleShowMore}
+                  disabled={loadingMore}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-border bg-surface hover:bg-surface-elevated text-foreground font-medium transition-colors shadow-2xs hover:border-border-strong cursor-pointer disabled:opacity-60"
+                >
+                  {loadingMore ? (
+                    <>
+                      <div className="h-3.5 w-3.5 rounded-full border-2 border-foreground border-t-transparent animate-spin" />
+                      <span>Fetching more...</span>
+                    </>
+                  ) : (
+                    <span>
+                      {visibleCount < papers.length ? "Show more" : "Fetch more"}
+                    </span>
+                  )}
+                </button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
