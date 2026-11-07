@@ -5,6 +5,33 @@ interface LogoProps extends React.SVGProps<SVGSVGElement> {
   size?: number;
 }
 
+export function AppBulbLogo({ className = "w-6 h-6", size, ...props }: LogoProps) {
+  return (
+    <svg
+      role="img"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={size}
+      height={size}
+      className={className}
+      {...props}
+    >
+      <title>What2Build</title>
+      {/* Bulb sphere with bottom neck closed, no lower screw lines */}
+      <path d="M9 19h6" />
+      <path d="M15 19c0-1.5 1.5-3 2.5-4.5 1-1.5 1.5-3.5 1.5-5.5a7 7 0 1 0-14 0c0 2 0.5 4 1.5 5.5 1 1.5 2.5 3 2.5 4.5" />
+      {/* </> code symbol inside sphere */}
+      <path d="m8.5 9-2 2 2 2" />
+      <path d="m15.5 9 2 2-2 2" />
+      <path d="m13 7.5-2 7" />
+    </svg>
+  );
+}
+
 export function OpenAILogo({ className = "w-6 h-6", size, ...props }: LogoProps) {
   return (
     <svg role="img" viewBox="0 0 24 24" fill="currentColor" width={size} height={size} className={className} {...props}>

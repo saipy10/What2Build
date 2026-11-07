@@ -2,12 +2,11 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Search, ChevronDown, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { SUPPORTED_COMPANIES } from "@/lib/companies";
-import { CompanyLogo, GitHubLogo } from "@/components/CompanyLogos";
+import { CompanyLogo, GitHubLogo, AppBulbLogo } from "@/components/CompanyLogos";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Navbar() {
@@ -79,15 +78,8 @@ export function Navbar() {
             href="/"
             className="flex items-center gap-2 text-foreground hover:opacity-85 transition-opacity shrink-0"
           >
-            <div className="relative flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden border border-border shadow-xs bg-surface shrink-0">
-              <Image
-                src="/images/logo.png"
-                alt="What2Build Logo"
-                width={32}
-                height={32}
-                className="w-full h-full object-contain"
-                priority
-              />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border shadow-xs bg-surface text-foreground shrink-0 p-1">
+              <AppBulbLogo className="w-full h-full text-foreground" />
             </div>
             <span className="font-semibold tracking-tight text-foreground text-sm sm:text-base inline">
               What2Build

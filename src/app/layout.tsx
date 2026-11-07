@@ -19,10 +19,11 @@ export const metadata: Metadata = {
   description: "Browse official research and engineering updates from frontier AI labs, and generate actionable project ideas from beginner to advanced.",
   icons: {
     icon: [
-      { url: "/images/logo.png", type: "image/png" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/images/logo.svg", type: "image/svg+xml" },
     ],
     apple: [
-      { url: "/images/logo.png" },
+      { url: "/favicon.svg" },
     ],
   },
 };
