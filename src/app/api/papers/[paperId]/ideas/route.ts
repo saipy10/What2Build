@@ -138,8 +138,18 @@ export async function POST(
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to generate project ideas";
     console.error("Project ideas generation error:", message);
+
+    const isLimitOrGroqError =
+      message.toLowerCase().includes("limit") ||
+      message.toLowerCase().includes("groq") ||
+      message.toLowerCase().includes("rate");
+
+    const userMessage = isLimitOrGroqError
+      ? "API limits reached. Please try again later."
+      : message;
+
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: userMessage },
       { status: 500 }
     );
   }

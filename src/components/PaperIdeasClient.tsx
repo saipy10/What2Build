@@ -9,7 +9,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { ProjectIdeaCard, ProjectIdeaData } from "@/components/ProjectIdeaCard";
-import { LoadingState, ErrorState } from "@/components/States";
+import { LoadingState, ErrorState, EmptyState } from "@/components/States";
 import { CompanyLogo } from "@/components/CompanyLogos";
 import { StaggerContainer, StaggerItem } from "@/components/Reveal";
 import { AnimatePresence } from "motion/react";
@@ -235,11 +235,22 @@ export function PaperIdeasClient({ paperId }: { paperId: string }) {
 
       {/* Ideas Content */}
       {loading ? (
-        <LoadingState message="Analyzing publication and synthesizing engineering projects..." />
+        <LoadingState
+          type="idea"
+          count={3}
+          message="Analyzing publication and synthesizing engineering projects..."
+        />
       ) : error ? (
         <ErrorState message={error} onRetry={fetchPaperAndIdeas} />
+      ) : ideas.length === 0 ? (
+        <EmptyState
+          title="No project ideas generated yet"
+          message="No implementation ideas were generated for this paper. Click below to synthesize ideas."
+          actionLabel={regenerating ? "Synthesizing..." : "Generate Ideas"}
+          onAction={handleRegenerate}
+        />
       ) : (
-        <StaggerContainer className="grid grid-cols-1 gap-6">
+        <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <AnimatePresence mode="popLayout">
             {ideas.map((idea, index) => (
               <StaggerItem key={idea.id || index}>

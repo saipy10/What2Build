@@ -122,7 +122,8 @@ Return a JSON object conforming exactly to this structure:
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Groq API request failed (${res.status}): ${errText}`);
+    console.error(`Groq API request failed (${res.status}): ${errText}`);
+    throw new Error("API limits reached. Please try again later.");
   }
 
   const json = await res.json();
