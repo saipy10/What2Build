@@ -182,12 +182,6 @@ export function Navbar() {
 
         {/* Right side navigation & Theme Toggle */}
         <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-          <Link
-            href="/#companies"
-            className="text-xs sm:text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            All Companies
-          </Link>
           <a
             href={process.env.NEXT_PUBLIC_REPO_URL || "https://github.com/saipy10/What2Build"}
             target="_blank"
