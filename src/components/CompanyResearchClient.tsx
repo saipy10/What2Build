@@ -217,10 +217,6 @@ export function CompanyResearchClient({
             <span>Research Papers (arXiv)</span>
           </button>
         </div>
-
-        <span className="text-xs text-muted-foreground">
-          Showing {Math.min(visibleCount, papers.length)} of {papers.length} articles
-        </span>
       </div>
 
       {/* Main content list */}

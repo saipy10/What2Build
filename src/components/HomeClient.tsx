@@ -59,33 +59,6 @@ export function HomeClient({ companies, faqs }: HomeClientProps) {
         </Reveal>
       </section>
 
-      {/* Direct AEO Overview Card */}
-      <section className="mb-20 rounded-xl border border-border/80 bg-surface/50 p-6 sm:p-8 backdrop-blur-xs">
-        <h2 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
-          What is What2Build?
-        </h2>
-        <p className="mt-3 text-muted-foreground leading-relaxed text-base">
-          What2Build is an open engineering platform that bridges frontier AI research with real-world software development. By continuously monitoring official publications, arXiv preprints, and technical blogs from top labs like OpenAI, Google DeepMind, Anthropic, and Meta, What2Build breaks complex research down into concrete project specifications with step-by-step guidance.
-        </p>
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="rounded-lg border border-border/60 p-4 bg-background/60">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tier 1</span>
-            <h3 className="mt-1 font-medium text-foreground">Beginner PoCs</h3>
-            <p className="mt-1 text-xs text-muted-foreground">Prompt engineering, API integration, and straightforward reproductions.</p>
-          </div>
-          <div className="rounded-lg border border-border/60 p-4 bg-background/60">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tier 2</span>
-            <h3 className="mt-1 font-medium text-foreground">Intermediate Systems</h3>
-            <p className="mt-1 text-xs text-muted-foreground">Vector retrieval, microservice evaluation pipelines, and fine-tuning.</p>
-          </div>
-          <div className="rounded-lg border border-border/60 p-4 bg-background/60">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tier 3</span>
-            <h3 className="mt-1 font-medium text-foreground">Advanced Architectures</h3>
-            <p className="mt-1 text-xs text-muted-foreground">Multi-agent systems, RLHF loops, custom kernels, and distributed training.</p>
-          </div>
-        </div>
-      </section>
-
       {/* Companies Grid Section */}
       <section id="companies" className="scroll-mt-20">
         <Reveal className="mb-8">
@@ -111,8 +84,35 @@ export function HomeClient({ companies, faqs }: HomeClientProps) {
         </StaggerContainer>
       </section>
 
+      {/* Direct AEO Overview Card */}
+      <section className="mt-24 rounded-xl border border-border/80 bg-surface/50 p-6 sm:p-8 backdrop-blur-xs">
+        <h2 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
+          What is What2Build?
+        </h2>
+        <p className="mt-3 text-muted-foreground leading-relaxed text-base">
+          What2Build is an open engineering platform that bridges frontier AI research with real-world software development. By continuously monitoring official publications, arXiv preprints, and technical blogs from top labs like OpenAI, Google DeepMind, Anthropic, and Meta, What2Build breaks complex research down into concrete project specifications with step-by-step guidance.
+        </p>
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="rounded-lg border border-border/60 p-4 bg-background/60">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tier 1</span>
+            <h3 className="mt-1 font-medium text-foreground">Beginner PoCs</h3>
+            <p className="mt-1 text-xs text-muted-foreground">Prompt engineering, API integration, and straightforward reproductions.</p>
+          </div>
+          <div className="rounded-lg border border-border/60 p-4 bg-background/60">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tier 2</span>
+            <h3 className="mt-1 font-medium text-foreground">Intermediate Systems</h3>
+            <p className="mt-1 text-xs text-muted-foreground">Vector retrieval, microservice evaluation pipelines, and fine-tuning.</p>
+          </div>
+          <div className="rounded-lg border border-border/60 p-4 bg-background/60">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tier 3</span>
+            <h3 className="mt-1 font-medium text-foreground">Advanced Architectures</h3>
+            <p className="mt-1 text-xs text-muted-foreground">Multi-agent systems, RLHF loops, custom kernels, and distributed training.</p>
+          </div>
+        </div>
+      </section>
+
       {/* FAQ Section */}
-      <section className="mt-24 pt-12 border-t border-border">
+      <section className="mt-20 pt-12 border-t border-border">
         <FaqSection
           title="Frequently Asked Questions (FAQ)"
           description="Everything you need to know about using What2Build to convert AI research into portfolio projects."
