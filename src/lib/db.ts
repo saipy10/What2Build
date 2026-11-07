@@ -1,25 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
-
-// Check if a valid DATABASE_URL is available
-const isDatabaseConfigured = !!process.env.DATABASE_URL && !process.env.DATABASE_URL.includes("randompassword");
-
-export const prisma =
-  globalForPrisma.prisma ??
-  (isDatabaseConfigured
-    ? new PrismaClient({
-        log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
-      })
-    : null);
-
-if (process.env.NODE_ENV !== "production" && prisma) {
-  globalForPrisma.prisma = prisma;
-}
-
-// In-memory fallback repository when PostgreSQL is not configured locally
+// In-memory fallback repository when Supabase is not reached or during local development
 export interface MemoryPaper {
   id: string;
   companyId: string;
@@ -55,11 +34,12 @@ export interface MemoryCompany {
   slug: string;
   description: string;
   researchUrl: string;
+  updatedAt?: Date;
 }
 
 const memoryStore = {
   companies: new Map<string, MemoryCompany>(),
-  papers: new Map<string, MemoryPaper>(),
+  papers: new Map<string, MemoryPaper[]>(),
   ideas: new Map<string, MemoryProjectIdea[]>(),
   lastRefreshed: new Map<string, Date>(),
 };
@@ -67,23 +47,30 @@ const memoryStore = {
 export const memoryDb = {
   getCompanyBySlug: (slug: string) => memoryStore.companies.get(slug),
   saveCompany: (company: MemoryCompany) => {
-    memoryStore.companies.set(company.slug, company);
-    return company;
+    memoryStore.companies.set(company.slug, { ...company, updatedAt: new Date() });
+    return memoryStore.companies.get(company.slug)!;
   },
-  getPapersByCompany: (companySlug: string) => {
-    return Array.from(memoryStore.papers.values())
-      .filter((p) => p.companyId === companySlug)
-      .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
-  },
-  getPaperById: (id: string) => memoryStore.papers.get(id),
+  getPapersByCompany: (companySlug: string) => memoryStore.papers.get(companySlug) || [],
   savePapers: (papers: MemoryPaper[]) => {
-    papers.forEach((p) => memoryStore.papers.set(p.id, p));
+    for (const paper of papers) {
+      const existing = memoryStore.papers.get(paper.companyId) || [];
+      const updated = [paper, ...existing.filter((p) => p.sourceUrl !== paper.sourceUrl)];
+      memoryStore.papers.set(paper.companyId, updated);
+    }
+  },
+  getPaperById: (id: string): MemoryPaper | undefined => {
+    for (const list of memoryStore.papers.values()) {
+      const found = list.find((p) => p.id === id);
+      if (found) return found;
+    }
+    return undefined;
   },
   getIdeasByPaperId: (paperId: string) => memoryStore.ideas.get(paperId) || [],
   saveIdeas: (paperId: string, ideas: MemoryProjectIdea[]) => {
     memoryStore.ideas.set(paperId, ideas);
   },
-  getLastRefreshed: (slug: string) => memoryStore.lastRefreshed.get(slug),
-  setLastRefreshed: (slug: string, date: Date) => memoryStore.lastRefreshed.set(slug, date),
+  getLastRefreshed: (key: string) => memoryStore.lastRefreshed.get(key),
+  setLastRefreshed: (key: string, date: Date) => {
+    memoryStore.lastRefreshed.set(key, date);
+  },
 };
-

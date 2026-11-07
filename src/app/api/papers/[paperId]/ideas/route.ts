@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPaperById } from "@/lib/paperService";
 import { generateProjectIdeas } from "@/lib/ai";
-import { prisma, memoryDb } from "@/lib/db";
+import { memoryDb } from "@/lib/db";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export async function GET(
   request: NextRequest,
@@ -10,27 +11,40 @@ export async function GET(
   try {
     const { paperId } = await params;
 
-    // Check Prisma DB
-    if (prisma) {
+    // Check Supabase
+    if (supabaseAdmin) {
       try {
-        const ideas = await prisma.projectIdea.findMany({
-          where: { paperId },
-          orderBy: { createdAt: "asc" },
-        });
+        const { data: ideas, error } = await supabaseAdmin
+          .from("project_ideas")
+          .select("*")
+          .eq("paper_id", paperId)
+          .order("created_at", { ascending: true });
 
-        if (ideas.length > 0) {
+        if (!error && ideas && ideas.length > 0) {
           return NextResponse.json({
             success: true,
             source: "cache",
-            ideas,
+            ideas: ideas.map((i) => ({
+              id: i.id,
+              paperId: i.paper_id,
+              title: i.title,
+              description: i.description,
+              features: i.features || [],
+              skills: i.skills || [],
+              technologies: i.technologies || [],
+              difficulty: i.difficulty,
+              researchConnection: i.research_connection,
+              createdAt: i.created_at,
+              updatedAt: i.updated_at,
+            })),
           });
         }
       } catch (err) {
-        console.warn("Prisma error getting ideas:", err);
+        console.warn("Supabase error getting ideas:", err);
       }
     }
 
-    // Check in-memory store
+    // Fallback: Check in-memory store
     const memIdeas = memoryDb.getIdeasByPaperId(paperId);
     return NextResponse.json({
       success: true,
@@ -61,7 +75,7 @@ export async function POST(
       );
     }
 
-    // Generate fresh ideas with Groq API (no silent templates)
+    // Generate fresh ideas with AI
     const result = await generateProjectIdeas({
       title: paper.title,
       description: paper.description,
@@ -85,33 +99,31 @@ export async function POST(
       updatedAt: now,
     }));
 
-    // Persist in Prisma if available
-    if (prisma) {
+    // Persist to Supabase if available
+    if (supabaseAdmin) {
       try {
-        await prisma.projectIdea.deleteMany({ where: { paperId } });
-        for (const idea of formattedIdeas) {
-          await prisma.projectIdea.create({
-            data: {
-              paperId,
-              title: idea.title,
-              description: idea.description,
-              features: idea.features,
-              skills: idea.skills,
-              technologies: idea.technologies,
-              difficulty: idea.difficulty,
-              researchConnection: idea.researchConnection,
-            },
-          });
-        }
-        await prisma.ideaGeneration.create({
-          data: {
-            paperId,
-            status: "SUCCESS",
-            model: "openai/gpt-oss-120b",
-          },
+        await supabaseAdmin.from("project_ideas").delete().eq("paper_id", paperId);
+
+        const rowsToInsert = formattedIdeas.map((idea) => ({
+          paper_id: paperId,
+          title: idea.title,
+          description: idea.description,
+          features: idea.features,
+          skills: idea.skills,
+          technologies: idea.technologies,
+          difficulty: idea.difficulty,
+          research_connection: idea.researchConnection,
+        }));
+
+        await supabaseAdmin.from("project_ideas").insert(rowsToInsert);
+
+        await supabaseAdmin.from("idea_generations").insert({
+          paper_id: paperId,
+          status: "SUCCESS",
+          model: "openai/gpt-oss-120b",
         });
       } catch (err) {
-        console.warn("Failed persisting ideas to Prisma:", err);
+        console.warn("Failed persisting ideas to Supabase:", err);
       }
     }
 

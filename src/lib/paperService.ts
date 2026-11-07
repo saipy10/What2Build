@@ -1,4 +1,5 @@
-import { prisma, memoryDb } from "./db";
+import { memoryDb } from "./db";
+import { supabaseAdmin } from "./supabase";
 import { fetchCompanyBlogs, fetchArxivPapers, DiscoveredPaper } from "./crawler";
 import { SUPPORTED_COMPANIES } from "./companies";
 
@@ -14,91 +15,127 @@ export async function getCompanyPapers(
     throw new Error(`Company not found: ${companySlug}`);
   }
 
-  // Determine what crawler to use based on filter:
-  // Default is "blog" (only company's respective blog pages).
-  // "research" is ONLY used when research filter is turned on.
   const isResearchOnly = filterType === "research";
-
-  // 1. In-memory storage / cache key strategy
   const cacheKey = `${companySlug}:${filterType}`;
 
-  if (prisma) {
+  // 1. Try Supabase if configured
+  if (supabaseAdmin) {
     try {
-      let company = await prisma.company.findUnique({
-        where: { slug: companySlug },
-        include: {
-          papers: {
-            orderBy: { publishedAt: "desc" },
-            take: 15,
-          },
-        },
-      });
+      const { data: companyData, error: companyErr } = await supabaseAdmin
+        .from("companies")
+        .select("id, slug, updated_at")
+        .eq("slug", companySlug)
+        .maybeSingle();
 
-      if (!company) {
-        company = await prisma.company.create({
-          data: {
+      if (companyErr) {
+        console.warn("Supabase company query error:", companyErr.message);
+      }
+
+      let companyId = companyData?.id;
+
+      if (!companyId) {
+        const { data: newCompany, error: insertErr } = await supabaseAdmin
+          .from("companies")
+          .insert({
             slug: config.slug,
             name: config.name,
             description: config.description,
-            researchUrl: config.researchUrl,
-          },
-          include: { papers: true },
-        });
+            research_url: config.researchUrl,
+          })
+          .select("id")
+          .single();
+
+        if (!insertErr && newCompany) {
+          companyId = newCompany.id;
+        }
       }
 
-      const hasValidCache =
-        !forceRefresh &&
-        company.papers &&
-        company.papers.length >= 3 &&
-        Date.now() - new Date(company.updatedAt).getTime() < CACHE_TTL_MS;
+      if (companyId) {
+        const { data: cachedDbPapers } = await supabaseAdmin
+          .from("papers")
+          .select("*")
+          .eq("company_id", companyId)
+          .order("published_at", { ascending: false })
+          .limit(15);
 
-      if (hasValidCache) {
-        return company.papers;
-      }
+        const hasValidCache =
+          !forceRefresh &&
+          cachedDbPapers &&
+          cachedDbPapers.length >= 3 &&
+          companyData?.updated_at &&
+          Date.now() - new Date(companyData.updated_at).getTime() < CACHE_TTL_MS;
 
-      // Fetch from official blog OR arXiv research papers
-      const discovered: DiscoveredPaper[] = isResearchOnly
-        ? await fetchArxivPapers(companySlug, 10)
-        : await fetchCompanyBlogs(companySlug, 10);
-
-      if (discovered.length > 0) {
-        for (const p of discovered) {
-          await prisma.paper.upsert({
-            where: { sourceUrl: p.sourceUrl },
-            update: {
-              title: p.title,
-              description: p.description,
-              publishedAt: p.publishedAt,
-              authors: p.authors,
-              externalId: p.externalId,
-            },
-            create: {
-              companyId: company.id,
-              title: p.title,
-              description: p.description,
-              publishedAt: p.publishedAt,
-              authors: p.authors,
-              sourceUrl: p.sourceUrl,
-              externalId: p.externalId,
-            },
-          });
+        if (hasValidCache) {
+          return cachedDbPapers.map((p) => ({
+            id: p.id,
+            companyId: p.company_id,
+            title: p.title,
+            description: p.description,
+            publishedAt: new Date(p.published_at),
+            authors: p.authors || [],
+            sourceUrl: p.source_url,
+            externalId: p.external_id,
+            category: p.category,
+            contentType: p.content_type,
+            createdAt: new Date(p.created_at),
+            updatedAt: new Date(p.updated_at),
+          }));
         }
 
-        await prisma.company.update({
-          where: { id: company.id },
-          data: { updatedAt: new Date() },
-        });
+        // Fetch fresh papers from source
+        const discovered: DiscoveredPaper[] = isResearchOnly
+          ? await fetchArxivPapers(companySlug, 10)
+          : await fetchCompanyBlogs(companySlug, 10);
 
-        return await prisma.paper.findMany({
-          where: { companyId: company.id },
-          orderBy: { publishedAt: "desc" },
-          take: 10,
-        });
+        if (discovered.length > 0) {
+          const rowsToUpsert = discovered.map((p) => ({
+            company_id: companyId,
+            title: p.title,
+            description: p.description,
+            published_at: p.publishedAt.toISOString(),
+            authors: p.authors,
+            source_url: p.sourceUrl,
+            external_id: p.externalId,
+            category: p.category,
+            content_type: p.contentType || (isResearchOnly ? "research" : "blog"),
+          }));
+
+          await supabaseAdmin.from("papers").upsert(rowsToUpsert, {
+            onConflict: "source_url",
+          });
+
+          await supabaseAdmin
+            .from("companies")
+            .update({ updated_at: new Date().toISOString() })
+            .eq("id", companyId);
+
+          const { data: refreshedPapers } = await supabaseAdmin
+            .from("papers")
+            .select("*")
+            .eq("company_id", companyId)
+            .order("published_at", { ascending: false })
+            .limit(10);
+
+          if (refreshedPapers && refreshedPapers.length > 0) {
+            return refreshedPapers.map((p) => ({
+              id: p.id,
+              companyId: p.company_id,
+              title: p.title,
+              description: p.description,
+              publishedAt: new Date(p.published_at),
+              authors: p.authors || [],
+              sourceUrl: p.source_url,
+              externalId: p.external_id,
+              category: p.category,
+              contentType: p.content_type,
+              createdAt: new Date(p.created_at),
+              updatedAt: new Date(p.updated_at),
+            }));
+          }
+        }
       }
-
-      return company.papers;
     } catch (err) {
-      console.warn("Prisma query failed, falling back to memory repository:", err);
+      console.warn("Supabase query failed, falling back to memory repository:", err);
     }
   }
 
@@ -126,8 +163,6 @@ export async function getCompanyPapers(
     return cachedPapers.slice(0, 10);
   }
 
-  // Blog mode: fetch only from company's respective blog pages.
-  // Research mode: query arXiv only when filter is turned on for research papers.
   const discovered: DiscoveredPaper[] = isResearchOnly
     ? await fetchArxivPapers(companySlug, 10)
     : await fetchCompanyBlogs(companySlug, 10);
@@ -154,15 +189,41 @@ export async function getCompanyPapers(
 }
 
 export async function getPaperById(paperId: string) {
-  if (prisma) {
+  if (supabaseAdmin) {
     try {
-      const paper = await prisma.paper.findUnique({
-        where: { id: paperId },
-        include: { company: true },
-      });
-      if (paper) return paper;
+      const { data: paper } = await supabaseAdmin
+        .from("papers")
+        .select("*, companies(*)")
+        .eq("id", paperId)
+        .maybeSingle();
+
+      if (paper) {
+        return {
+          id: paper.id,
+          companyId: paper.company_id,
+          title: paper.title,
+          description: paper.description,
+          publishedAt: new Date(paper.published_at),
+          authors: paper.authors || [],
+          sourceUrl: paper.source_url,
+          externalId: paper.external_id,
+          category: paper.category,
+          contentType: paper.content_type,
+          createdAt: new Date(paper.created_at),
+          updatedAt: new Date(paper.updated_at),
+          company: paper.companies
+            ? {
+                id: paper.companies.id,
+                name: paper.companies.name,
+                slug: paper.companies.slug,
+                description: paper.companies.description,
+                researchUrl: paper.companies.research_url,
+              }
+            : undefined,
+        };
+      }
     } catch (err) {
-      console.warn("Prisma error in getPaperById:", err);
+      console.warn("Supabase error in getPaperById:", err);
     }
   }
 

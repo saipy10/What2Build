@@ -23,7 +23,7 @@ What2Build is a research discovery and AI-powered project generator web applicat
      - **Idea 3**: Advanced or agentic frontier experiment.
    - Formatted with concrete features, demonstrated skills, suggested technology stack, difficulty level, and research connections.
    - Validated through Zod schemas.
-   - Caching in PostgreSQL (or in-memory fallback), with an explicit **Regenerate Ideas** trigger.
+   - Caching with an explicit **Regenerate Ideas** trigger.
 
 4. **Modern Developer-Centric UI**:
    - Dark theme default with deep charcoal backgrounds, minimal accents, and accessible typography.
@@ -37,7 +37,7 @@ What2Build is a research discovery and AI-powered project generator web applicat
 - **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
-- **Database / ORM**: PostgreSQL & Prisma ORM
+- **Backend / Database**: Supabase (`@supabase/supabase-js`, `@supabase/ssr`)
 - **AI SDK**: Vercel AI SDK (`ai`, `@ai-sdk/openai`) & Zod
 - **Icons**: Lucide React
 - **Parser**: `fast-xml-parser` & `cheerio`
@@ -48,8 +48,8 @@ What2Build is a research discovery and AI-powered project generator web applicat
 
 ### 1. Prerequisites
 - Node.js (v20 or newer recommended)
-- (Optional) PostgreSQL database instance
-- (Optional) OpenAI API Key
+- A [Supabase](https://supabase.com) project
+- (Optional) Groq / OpenAI API Key
 
 ### 2. Installation
 
@@ -61,30 +61,28 @@ npm install
 
 ### 3. Environment Setup
 
-Copy `.env.example` to `.env`:
+Copy `.env.example` to `.env.local`:
 
 ```bash
-cp .env.example .env
+cp .env.example .env.local
 ```
 
-Configure your environment variables in `.env`:
+Configure your environment variables in `.env.local`:
 
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/whattobuild?schema=public"
+# Supabase Credentials
+NEXT_PUBLIC_SUPABASE_URL="https://<your-project-id>.supabase.co"
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="sb_publishable_<your-key>"
+
+# LLM Providers (Optional - deterministic generator used if omitted)
+GROQ_API="your-groq-api-key"
 OPENAI_API_KEY="your-openai-api-key"
 OPENAI_MODEL="gpt-4o-mini"
 ```
 
-> **Note**: If `DATABASE_URL` is not pointing to an active PostgreSQL database, What2Build automatically uses an embedded in-memory repository so that the application runs seamlessly out-of-the-box.
-> Similarly, if `OPENAI_API_KEY` is omitted, the built-in intelligent generator synthesizes grounded project ideas tailored to the paper context.
+> **Note**: If LLM API keys are omitted, What2Build automatically uses its built-in intelligent generator to synthesize grounded project ideas tailored to the paper context.
 
-### 4. Database Setup (Optional if PostgreSQL is running)
-
-```bash
-npx prisma db push
-```
-
-### 5. Running the Application
+### 4. Running the Application
 
 Start the development server:
 
@@ -99,5 +97,5 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ## 🏛️ Architecture & Decisions
 
 - **Crawler Strategy**: We implement an official arXiv query engine using institutional identifiers and publication query syntax for each company, combined with structured metadata normalization. This prevents fragile HTML scraping breakage across corporate redesigns while guaranteeing access to the latest research preprints.
-- **Persistence Layer**: Prisma schema models `Company`, `Paper`, `ProjectIdea`, and `IdeaGeneration` with relational integrity. A resilient dual-backend system provides PostgreSQL persistence when connected and memory-safe caching during local development.
+- **Backend & Database**: Supabase provides serverless database and auth capabilities via `@supabase/ssr` with client/server utility wrappers in `src/utils/supabase/`.
 - **AI Generation Engine**: Uses structured object generation (`generateObject`) backed by Zod schemas to enforce strict JSON contracts for generated project ideas.
