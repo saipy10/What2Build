@@ -1,13 +1,53 @@
-# What2Build — Research-to-Project Idea Generator
+<p align="center">
+  <img src="./public/banner.svg" alt="What2Build — Turn engineering breakthroughs into projects you can build" width="100%"/>
+</p>
 
-What2Build is a research discovery and AI-powered project generator web application. It connects directly with the research outputs of the five frontier AI labs—**OpenAI**, **Google DeepMind**, **Anthropic**, **NVIDIA**, and **Meta AI**—crawls their latest publications, and generates exactly three actionable, portfolio-grade software project ideas inspired by each paper.
+<p align="center">
+  <strong>What2Build</strong> is an open engineering portal that bridges frontier AI research with real-world software development.<br/>
+  Pick a lab, browse its latest papers and engineering blogs, and instantly generate three tiered project ideas—from beginner PoC to advanced agentic architecture.
+</p>
+
+<p align="center">
+  <a href="https://github.com/saipy10/What2Build/stargazers"><img src="https://img.shields.io/github/stars/saipy10/What2Build?style=flat-square&color=6366f1&labelColor=111827" alt="Stars"/></a>
+  <a href="https://github.com/saipy10/What2Build/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-6366f1?style=flat-square&labelColor=111827" alt="License"/></a>
+  <img src="https://img.shields.io/badge/Next.js-16-9ca3af?style=flat-square&labelColor=111827" alt="Next.js 16"/>
+  <img src="https://img.shields.io/badge/TypeScript-5-60a5fa?style=flat-square&labelColor=111827" alt="TypeScript"/>
+  <img src="https://img.shields.io/badge/Tailwind-CSS-38bdf8?style=flat-square&labelColor=111827" alt="Tailwind CSS"/>
+</p>
+
+---
+
+## 📸 Screenshots
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="./public/screenshots/homepage.png" alt="What2Build Homepage" width="100%"/>
+      <br/><sub><b>Homepage — Hero &amp; Company Grid</b></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="./public/screenshots/company-page.png" alt="Company Hub Page" width="100%"/>
+      <br/><sub><b>Company Hub — Engineering Blogs</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="./public/screenshots/research-papers.png" alt="Research Papers Tab" width="100%"/>
+      <br/><sub><b>Research Papers (arXiv) Tab</b></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="./public/screenshots/project-ideas.png" alt="AI-Generated Project Ideas" width="100%"/>
+      <br/><sub><b>AI-Generated Project Ideas</b></sub>
+    </td>
+  </tr>
+</table>
 
 ---
 
 ## 🌟 Key Features
 
 1. **Frontier AI Organization Directory**:
-   - OpenAI, Google DeepMind, Anthropic, NVIDIA, and Meta AI.
+   - OpenAI, Google DeepMind, Anthropic, NVIDIA, Meta AI, and 12 more engineering orgs.
    - Shows company taglines, research scope, and links to official publication portals.
 
 2. **Automated Live Research Paper Discovery**:
