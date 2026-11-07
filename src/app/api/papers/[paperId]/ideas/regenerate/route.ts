@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPaperById } from "@/lib/paperService";
 import { generateProjectIdeas } from "@/lib/ai";
-import { prisma, memoryDb } from "@/lib/db";
+import { memoryDb } from "@/lib/db";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export async function POST(
   request: NextRequest,
@@ -42,46 +43,44 @@ export async function POST(
       updatedAt: now,
     }));
 
-    // Replace in Prisma only on success
-    if (prisma) {
+    // Replace in Supabase only on success
+    if (supabaseAdmin) {
       try {
-        await prisma.projectIdea.deleteMany({ where: { paperId } });
-        for (const idea of formattedIdeas) {
-          await prisma.projectIdea.create({
-            data: {
-              paperId,
-              title: idea.title,
-              description: idea.description,
-              features: idea.features,
-              skills: idea.skills,
-              technologies: idea.technologies,
-              difficulty: idea.difficulty,
-              researchConnection: idea.researchConnection,
-            },
-          });
-        }
-        await prisma.ideaGeneration.create({
-          data: {
-            paperId,
-            status: "SUCCESS",
-            model: process.env.OPENAI_MODEL || "gpt-4o-mini",
-          },
+        await supabaseAdmin.from("project_ideas").delete().eq("paper_id", paperId);
+
+        const rowsToInsert = formattedIdeas.map((idea) => ({
+          paper_id: paperId,
+          title: idea.title,
+          description: idea.description,
+          features: idea.features,
+          skills: idea.skills,
+          technologies: idea.technologies,
+          difficulty: idea.difficulty,
+          research_connection: idea.researchConnection,
+        }));
+
+        await supabaseAdmin.from("project_ideas").insert(rowsToInsert);
+
+        await supabaseAdmin.from("idea_generations").insert({
+          paper_id: paperId,
+          status: "SUCCESS",
+          model: "openai/gpt-oss-120b",
         });
       } catch (err) {
-        console.warn("Failed persisting regenerated ideas in Prisma:", err);
+        console.warn("Failed persisting regenerated ideas to Supabase:", err);
       }
     }
 
-    // Replace in memory store
+    // Save in memory store
     memoryDb.saveIdeas(paperId, formattedIdeas);
 
     return NextResponse.json({
       success: true,
-      message: "Regenerated project ideas successfully",
       ideas: formattedIdeas,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to regenerate project ideas";
+    console.error("Regenerate ideas error:", message);
     return NextResponse.json(
       { success: false, error: message },
       { status: 500 }
