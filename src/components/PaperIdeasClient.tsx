@@ -12,6 +12,7 @@ import { ProjectIdeaCard, ProjectIdeaData } from "@/components/ProjectIdeaCard";
 import { LoadingState, ErrorState } from "@/components/States";
 import { CompanyLogo } from "@/components/CompanyLogos";
 import { StaggerContainer, StaggerItem } from "@/components/Reveal";
+import { AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 
 interface PaperDetails {
