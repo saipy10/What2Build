@@ -28,16 +28,28 @@ export function StaggerContainer({
   children,
   className,
   staggerDelay = 0.05,
+  useInView = false,
+  ...props
 }: {
   children: React.ReactNode;
   className?: string;
   staggerDelay?: number;
-}) {
+  useInView?: boolean;
+} & HTMLMotionProps<"div">) {
+  const animationProps = useInView
+    ? {
+        initial: "hidden",
+        whileInView: "show",
+        viewport: { once: true, amount: "some" as const },
+      }
+    : {
+        initial: "hidden",
+        animate: "show",
+      };
+
   return (
     <motion.div
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, amount: 0.05 }}
+      {...animationProps}
       variants={{
         hidden: {},
         show: {
@@ -47,6 +59,7 @@ export function StaggerContainer({
         },
       }}
       className={className}
+      {...props}
     >
       {children}
     </motion.div>
