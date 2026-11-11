@@ -5,9 +5,9 @@ import { createOpenAI } from "@ai-sdk/openai";
 export const ProjectIdeaItemSchema = z.object({
   title: z.string().describe("A concise, compelling title for the software project"),
   description: z.string().describe("Clear, engaging summary of what the developer could build"),
-  features: z.array(z.string()).min(2).max(5).describe("Key functionality and practical feature components"),
-  skills: z.array(z.string()).min(2).max(5).describe("Concrete software, engineering, and machine learning skills demonstrated"),
-  technologies: z.array(z.string()).min(2).max(6).describe("Recommended tech stack, frameworks, tools, and libraries"),
+  features: z.array(z.string()).min(2).max(7).describe("Key functionality and practical feature components tailored to the scope of this project"),
+  skills: z.array(z.string()).min(2).max(8).describe("Concrete software, engineering, domain, and machine learning skills demonstrated. Adjust count dynamically based on the project depth (not fixed to 3)."),
+  technologies: z.array(z.string()).min(2).max(10).describe("Realistic, comprehensive tech stack (languages, frameworks, libraries, databases, inference engines, tools) specifically suited to this idea. Vary freely according to the project's requirements (not fixed to 3)."),
   difficulty: z.enum(["Beginner", "Intermediate", "Advanced"]).describe("Developer difficulty level: Idea 1 must be Beginner, Idea 2 must be Intermediate, Idea 3 must be Advanced"),
   researchConnection: z.string().describe("Clear explanation of how the project translates or implements concepts from the research paper or blog"),
 });
@@ -40,7 +40,7 @@ export async function generateProjectIdeas(paper: {
 
   const prompt = `
 You are an elite Staff Software Engineer and AI Research Lead at "What2Build".
-Your mission is to analyze the following publication/blog from ${paper.companyName} and devise exactly THREE distinct, realistic, and inspiring software project ideas that a software developer or AI engineer can build for their portfolio or startup.
+Your mission is to analyze the following publication/blog from ${paper.companyName} and devise exactly THREE distinct, realistic, deeply relevant, and inspiring software project ideas that directly translate the core concepts, methodologies, or findings of this paper into buildable portfolio projects or startups.
 
 Publication Details:
 - Title: ${paper.title}
@@ -50,13 +50,22 @@ Publication Details:
 - Summary:
 ${paper.description}
 
+CRITICAL RELEVANCE & SPECIFICITY INSTRUCTIONS:
+- Each project idea MUST directly connect to the paper's core scientific or engineering contributions (e.g. specific algorithms, attention mechanisms, loss functions, benchmarks, evaluation setups, serving architectures, agent paradigms, or datasets). Avoid generic chatbot or CRUD wrapper ideas unless fundamentally transformed by the paper's specific technique.
+- DYNAMIC SKILLS & TECHNOLOGIES (DO NOT ARTIFICIALLY LIMIT):
+  * Do NOT limit skills or technologies to arbitrary numbers like exactly 3.
+  * Provide a natural, tailored number of skills and technologies that truly reflect what building that specific project entails.
+  * A beginner project might need 3-5 technologies, whereas an advanced distributed or multi-modal project might realistically span 5-8 technologies across data, model serving, backend, infrastructure, and evaluation stacks.
+  * Choose technologies specifically suited to the idea (e.g., PyTorch, vLLM, Triton, Ray, ONNX, WebGPU, LangGraph, FastAPI, pgvector, etc., rather than generic lists).
+  * Clearly detail the 'researchConnection': explain explicitly which technique, theorem, or architecture from the publication this project implements or leverages.
+
 CRITICAL REQUIREMENT - Strict 3-Tier Difficulty Progression:
 1. Idea 1 MUST have difficulty: "Beginner"
-   - Scope: Basic prototype, educational inspector, simple UI wrapper, or lightweight CLI utility demonstrating the core concept. Accessible to early career developers.
+   - Scope: Basic prototype, educational inspector/visualizer, clean CLI utility, or focused evaluation script demonstrating the paper's fundamental concept.
 2. Idea 2 MUST have difficulty: "Intermediate"
-   - Scope: Production-ready applied system, API microservice, real-time workflow pipeline, or end-user developer tool with auth, state management, or asynchronous tasks.
+   - Scope: Production-ready applied system, API microservice, real-time workflow pipeline, or end-user developer tool implementing the paper's mechanism with asynchronous tasks, storage, or UI.
 3. Idea 3 MUST have difficulty: "Advanced"
-   - Scope: Frontier autonomous multi-agent orchestration, complex distributed architecture, high-performance model parallel pipeline, or cutting-edge domain experiment.
+   - Scope: Frontier autonomous multi-agent orchestration, complex distributed architecture, high-performance model parallel pipeline, benchmark reproduction harness, or custom kernel/fine-tuning system.
 
 Return a JSON object conforming exactly to this structure:
 {
@@ -64,29 +73,29 @@ Return a JSON object conforming exactly to this structure:
     {
       "title": "Project Title",
       "description": "Engaging description",
-      "features": ["Feature 1", "Feature 2", "Feature 3"],
-      "skills": ["Skill 1", "Skill 2", "Skill 3"],
-      "technologies": ["Tech 1", "Tech 2", "Tech 3"],
+      "features": ["Key Feature 1", "Key Feature 2", "Key Feature 3"],
+      "skills": ["Skill 1", "Skill 2", "Skill 3", "Skill 4"],
+      "technologies": ["Tech 1", "Tech 2", "Tech 3", "Tech 4"],
       "difficulty": "Beginner",
-      "researchConnection": "Explanation of connection"
+      "researchConnection": "Direct explanation of how this translates the paper's specific methods/findings into code"
     },
     {
       "title": "Project Title",
       "description": "Engaging description",
-      "features": ["Feature 1", "Feature 2", "Feature 3"],
-      "skills": ["Skill 1", "Skill 2", "Skill 3"],
-      "technologies": ["Tech 1", "Tech 2", "Tech 3"],
+      "features": ["Key Feature 1", "Key Feature 2", "Key Feature 3", "Key Feature 4"],
+      "skills": ["Skill 1", "Skill 2", "Skill 3", "Skill 4", "Skill 5"],
+      "technologies": ["Tech 1", "Tech 2", "Tech 3", "Tech 4", "Tech 5"],
       "difficulty": "Intermediate",
-      "researchConnection": "Explanation of connection"
+      "researchConnection": "Direct explanation of how this translates the paper's specific methods/findings into code"
     },
     {
       "title": "Project Title",
       "description": "Engaging description",
-      "features": ["Feature 1", "Feature 2", "Feature 3"],
-      "skills": ["Skill 1", "Skill 2", "Skill 3"],
-      "technologies": ["Tech 1", "Tech 2", "Tech 3"],
+      "features": ["Key Feature 1", "Key Feature 2", "Key Feature 3", "Key Feature 4", "Key Feature 5"],
+      "skills": ["Skill 1", "Skill 2", "Skill 3", "Skill 4", "Skill 5", "Skill 6"],
+      "technologies": ["Tech 1", "Tech 2", "Tech 3", "Tech 4", "Tech 5", "Tech 6"],
       "difficulty": "Advanced",
-      "researchConnection": "Explanation of connection"
+      "researchConnection": "Direct explanation of how this translates the paper's specific methods/findings into code"
     }
   ]
 }

@@ -3,7 +3,6 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { motion } from "motion/react";
 import { CompanyLogo } from "@/components/CompanyLogos";
 
 interface CompanyCardProps {
@@ -22,12 +21,7 @@ export function CompanyCard({
   tagline,
 }: CompanyCardProps) {
   return (
-    <motion.div
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ duration: 0.18, ease: "easeOut" }}
-      className="h-full"
-    >
+    <div className="h-full transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98]">
       <Link
         href={`/companies/${slug}`}
         className="group relative flex h-full flex-col justify-between rounded-xl border border-border bg-surface p-6 shadow-xs transition-colors hover:border-border-strong hover:shadow-sm"
@@ -54,6 +48,6 @@ export function CompanyCard({
           <ArrowRight className="h-4 w-4 transform transition-transform group-hover:translate-x-1 text-muted-foreground group-hover:text-accent" />
         </div>
       </Link>
-    </motion.div>
+    </div>
   );
 }

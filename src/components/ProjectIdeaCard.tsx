@@ -59,10 +59,8 @@ export function ProjectIdeaCard({ idea, index }: ProjectIdeaCardProps) {
   const isLongDesc = (idea.description || "").length > 120;
 
   return (
-    <motion.div
-      whileHover={{ y: -2 }}
-      transition={{ duration: 0.18, ease: "easeOut" }}
-      className="flex flex-col justify-between h-full rounded-xl border border-border bg-surface p-6 shadow-xs hover:border-border-strong hover:shadow-sm transition-colors"
+    <div
+      className="flex flex-col justify-between h-full rounded-xl border border-border bg-surface p-6 shadow-xs hover:border-border-strong hover:shadow-sm transition-all duration-200 hover:-translate-y-0.5"
     >
       <div className="flex-1 flex flex-col">
         {/* Header: Difficulty Chip & Subtle Index */}
@@ -140,10 +138,10 @@ export function ProjectIdeaCard({ idea, index }: ProjectIdeaCardProps) {
           )}
         </div>
 
-        {/* 3 Bullet Features */}
+        {/* Key Features */}
         <div className="mb-5 rounded-lg border border-border bg-surface-elevated/40 p-4">
           <ul className="space-y-2.5">
-            {idea.features?.slice(0, 3).map((feat, i) => (
+            {idea.features?.map((feat, i) => (
               <li key={i} className="flex items-start gap-2.5 text-xs sm:text-sm text-foreground">
                 <Check className="h-4 w-4 text-accent shrink-0 mt-0.5" />
                 <span className="leading-relaxed">{feat}</span>
@@ -177,12 +175,11 @@ export function ProjectIdeaCard({ idea, index }: ProjectIdeaCardProps) {
           className="w-full flex items-center justify-between text-left text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
         >
           <span>Skills &amp; research link</span>
-          <motion.div
-            animate={{ rotate: showResearch ? 180 : 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          >
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-          </motion.div>
+          <ChevronDown
+            className={`h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 ${
+              showResearch ? "rotate-180" : ""
+            }`}
+          />
         </button>
 
         <AnimatePresence>
@@ -227,6 +224,6 @@ export function ProjectIdeaCard({ idea, index }: ProjectIdeaCardProps) {
           )}
         </AnimatePresence>
       </div>
-    </motion.div>
+    </div>
   );
 }
