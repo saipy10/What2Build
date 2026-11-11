@@ -33,14 +33,50 @@ export function ProjectIdeaCard({ idea, index }: ProjectIdeaCardProps) {
   const detailsId = useId();
   const descId = useId();
 
-  const handleCopyTitle = async () => {
+  const handleCopyDetails = async () => {
     try {
-      await navigator.clipboard.writeText(`${idea.title}\n\nStack: ${idea.technologies.join(", ")}`);
+      const sections: string[] = [
+        `# ${idea.title}`,
+        `Difficulty: ${idea.difficulty || "Intermediate"}`,
+        `\n## Overview\n${idea.description}`,
+      ];
+
+      if (idea.features && idea.features.length > 0) {
+        sections.push(
+          `\n## Key Features\n${idea.features.map((f) => `- ${f}`).join("\n")}`
+        );
+      }
+
+      if (idea.technologies && idea.technologies.length > 0) {
+        sections.push(`\n## Tech Stack\n${idea.technologies.join(", ")}`);
+      }
+
+      if (idea.skills && idea.skills.length > 0) {
+        sections.push(`\n## Competencies & Skills\n${idea.skills.join(", ")}`);
+      }
+
+      if (idea.researchConnection) {
+        sections.push(`\n## Research Connection\n${idea.researchConnection}`);
+      }
+
+      sections.push(
+        `\n---\n### Prompt for AI / LLM Discussion:
+Please brainstorm this project idea with me and think through it in depth. 
+The idea above represents the initial seed and core concept. Based on it, please:
+1. Brainstorm and critically analyze the idea, identifying key technical challenges, edge cases, and architectural considerations.
+2. Develop an actionable proof of concept (PoC) plan to validate the core value proposition quickly.
+3. Generate a comprehensive development roadmap (from PoC to MVP to production-ready implementation).
+4. Propose ideas to extend or refine the concept for maximum real-world impact.`
+      );
+
+      const contentToCopy = sections.join("\n").trim();
+
+      await navigator.clipboard.writeText(contentToCopy);
       setCopied(true);
-      toast.success("Copied project brief to clipboard");
+      toast.success("Copied full project details to clipboard");
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Failed to copy");
+      toast.error("Failed to copy project details");
     }
   };
 
@@ -76,8 +112,8 @@ export function ProjectIdeaCard({ idea, index }: ProjectIdeaCardProps) {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              aria-label="Copy project brief"
-              onClick={handleCopyTitle}
+              aria-label="Copy full project details"
+              onClick={handleCopyDetails}
               className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-elevated transition-colors cursor-pointer"
             >
               {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
