@@ -46,9 +46,7 @@
   </g>
 
   <!-- Wordmark: What2Build -->
-  <text x="224" y="148" font-family="'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="62" font-weight="700" letter-spacing="-2" fill="#f9fafb">What</text>
-  <text x="400" y="148" font-family="'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="62" font-weight="700" letter-spacing="-2" fill="url(#logoGrad)">2</text>
-  <text x="432" y="148" font-family="'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="62" font-weight="700" letter-spacing="-2" fill="#f9fafb">Build</text>
+  <text x="224" y="148" font-family="'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="62" font-weight="700" letter-spacing="-2"><tspan fill="#f9fafb">What</tspan><tspan fill="url(#logoGrad)">2</tspan><tspan fill="#f9fafb">Build</tspan></text>
 
   <!-- Tagline -->
   <text x="224" y="186" font-family="'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="20" font-weight="400" fill="#6b7280" letter-spacing="0.2">Turn engineering breakthroughs into projects you can build.</text>
@@ -94,3 +92,4 @@
     <rect x="13" y="0" width="20" height="20" rx="4" fill="#6366f1"/>
   </g>
 </svg>
+
