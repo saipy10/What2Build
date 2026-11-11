@@ -140,10 +140,10 @@ export function ProjectIdeaCard({ idea, index }: ProjectIdeaCardProps) {
           )}
         </div>
 
-        {/* 3 Bullet Features */}
+        {/* Key Features */}
         <div className="mb-5 rounded-lg border border-border bg-surface-elevated/40 p-4">
           <ul className="space-y-2.5">
-            {idea.features?.slice(0, 3).map((feat, i) => (
+            {idea.features?.map((feat, i) => (
               <li key={i} className="flex items-start gap-2.5 text-xs sm:text-sm text-foreground">
                 <Check className="h-4 w-4 text-accent shrink-0 mt-0.5" />
                 <span className="leading-relaxed">{feat}</span>
