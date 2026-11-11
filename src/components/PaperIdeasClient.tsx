@@ -251,13 +251,11 @@ export function PaperIdeasClient({ paperId }: { paperId: string }) {
         />
       ) : (
         <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <AnimatePresence mode="popLayout">
-            {ideas.map((idea, index) => (
-              <StaggerItem key={idea.id || index}>
-                <ProjectIdeaCard idea={idea} index={index} />
-              </StaggerItem>
-            ))}
-          </AnimatePresence>
+          {ideas.map((idea, index) => (
+            <StaggerItem key={idea.id || `idea-${index}`}>
+              <ProjectIdeaCard idea={idea} index={index} />
+            </StaggerItem>
+          ))}
         </StaggerContainer>
       )}
     </div>
