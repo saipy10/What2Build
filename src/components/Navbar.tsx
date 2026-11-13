@@ -57,7 +57,11 @@ export function Navbar() {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
-      setIsOpen(false);
+      if (isOpen) {
+        setIsOpen(false);
+      } else if (query) {
+        setQuery("");
+      }
     } else if (e.key === "Enter" && filteredCompanies.length > 0) {
       handleSelectCompany(filteredCompanies[0].slug);
     }
@@ -103,27 +107,29 @@ export function Navbar() {
                 placeholder="Search companies..."
                 className="w-full h-8 rounded-lg border border-border bg-surface pl-8 pr-12 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-accent transition-all shadow-2xs"
               />
-              <div className="absolute right-2 flex items-center gap-1">
-                {query ? (
+              <div className="absolute right-2 flex items-center gap-0.5">
+                {query && (
                   <button
                     type="button"
+                    aria-label="Clear search"
                     onClick={() => {
                       setQuery("");
                       inputRef.current?.focus();
                     }}
-                    className="p-0.5 rounded text-muted-foreground hover:text-foreground"
+                    className="p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer"
                   >
                     <X className="h-3 w-3" />
                   </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setIsOpen(!isOpen)}
-                    className="p-0.5 rounded text-muted-foreground hover:text-foreground"
-                  >
-                    <ChevronDown className={`h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-                  </button>
                 )}
+                <button
+                  type="button"
+                  aria-label="Toggle companies dropdown"
+                  aria-expanded={isOpen}
+                  onClick={() => setIsOpen(!isOpen)}
+                  className="p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <ChevronDown className={`h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                </button>
               </div>
             </div>
 

@@ -19,6 +19,10 @@ export const ProjectIdeasResponseSchema = z.object({
 export type ProjectIdeaItem = z.infer<typeof ProjectIdeaItemSchema>;
 export type ProjectIdeasResponse = z.infer<typeof ProjectIdeasResponseSchema>;
 
+export function getConfiguredAiModel(): string {
+  return process.env.GROQ_MODEL || process.env.GROK_MODEL || "openai/gpt-oss-120b";
+}
+
 export async function generateProjectIdeas(paper: {
   title: string;
   description: string;
@@ -101,7 +105,7 @@ Return a JSON object conforming exactly to this structure:
 }
 `;
 
-  const freeModel = process.env.GROQ_MODEL || process.env.GROK_MODEL || "openai/gpt-oss-120b";
+  const freeModel = getConfiguredAiModel();
   const isGroqKey = apiKey.startsWith("gsk_");
   const baseURL = isGroqKey ? "https://api.groq.com/openai/v1" : "https://api.x.ai/v1";
 
@@ -131,8 +135,14 @@ Return a JSON object conforming exactly to this structure:
 
   if (!res.ok) {
     const errText = await res.text();
-    console.error(`Groq API request failed (${res.status}): ${errText}`);
-    throw new Error("API limits reached. Please try again later.");
+    console.error(`AI provider request failed (${res.status}): ${errText}`);
+    if (res.status === 429) {
+      throw new Error("API limits reached. Please try again later.");
+    }
+    if (res.status === 401 || res.status === 403) {
+      throw new Error("AI provider authentication failed. Please check your API key configuration.");
+    }
+    throw new Error(`AI provider request failed (status ${res.status}). Please try again later.`);
   }
 
   const json = await res.json();

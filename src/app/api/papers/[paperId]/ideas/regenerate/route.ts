@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPaperById } from "@/lib/paperService";
-import { generateProjectIdeas } from "@/lib/ai";
+import { generateProjectIdeas, getConfiguredAiModel } from "@/lib/ai";
 import { memoryDb } from "@/lib/db";
 import { supabaseAdmin } from "@/lib/supabase";
 
@@ -8,8 +8,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ paperId: string }> }
 ) {
+  const { paperId } = await params;
+  const configuredModel = getConfiguredAiModel();
   try {
-    const { paperId } = await params;
     const paper = await getPaperById(paperId);
 
     if (!paper) {
@@ -64,7 +65,7 @@ export async function POST(
         await supabaseAdmin.from("idea_generations").insert({
           paper_id: paperId,
           status: "SUCCESS",
-          model: "openai/gpt-oss-120b",
+          model: configuredModel,
         });
       } catch (err) {
         console.warn("Failed persisting regenerated ideas to Supabase:", err);
@@ -82,12 +83,26 @@ export async function POST(
     const message = error instanceof Error ? error.message : "Failed to regenerate project ideas";
     console.error("Regenerate ideas error:", message);
 
-    const isLimitOrGroqError =
-      message.toLowerCase().includes("limit") ||
-      message.toLowerCase().includes("groq") ||
-      message.toLowerCase().includes("rate");
+    if (supabaseAdmin) {
+      try {
+        await supabaseAdmin.from("idea_generations").insert({
+          paper_id: paperId,
+          status: "FAILED",
+          model: configuredModel,
+        });
+      } catch (logErr) {
+        console.warn("Failed logging failed regeneration to Supabase:", logErr);
+      }
+    }
 
-    const userMessage = isLimitOrGroqError
+    const lower = message.toLowerCase();
+    const isLimitError =
+      lower.includes("limit") ||
+      lower.includes("rate") ||
+      lower.includes("429") ||
+      lower.includes("quota");
+
+    const userMessage = isLimitError
       ? "API limits reached. Please try again later."
       : message;
 

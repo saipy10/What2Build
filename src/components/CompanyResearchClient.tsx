@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Newspaper,
   BookOpen,
+  AlertCircle,
 } from "lucide-react";
 import { PaperCard, PaperData } from "@/components/PaperCard";
 import { LoadingState, ErrorState, EmptyState } from "@/components/States";
@@ -30,6 +31,7 @@ export function CompanyResearchClient({
   const [company, setCompany] = useState<CompanyConfig>(initialCompany);
   const [papers, setPapers] = useState<PaperData[]>([]);
   const [visibleCount, setVisibleCount] = useState(5);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -37,7 +39,11 @@ export function CompanyResearchClient({
   const [filterMode, setFilterMode] = useState<"blog" | "research">("blog");
 
   const fetchPapers = useCallback(
-    async (force = false, filterOverride?: "blog" | "research", requestedLimit = 10) => {
+    async (
+      force = false,
+      filterOverride?: "blog" | "research",
+      requestedLimit = 10
+    ): Promise<PaperData[] | null> => {
       const activeFilter = filterOverride || filterMode;
       try {
         if (force) {
@@ -46,6 +52,8 @@ export function CompanyResearchClient({
           setLoadingMore(true);
         } else {
           setLoading(true);
+          setPapers([]);
+          setHasMore(false);
         }
         setError(null);
 
@@ -65,6 +73,7 @@ export function CompanyResearchClient({
 
         const fetchedPapers: PaperData[] = data.papers || [];
         setPapers(fetchedPapers);
+        setHasMore(fetchedPapers.length >= requestedLimit && requestedLimit < 50);
         if (data.company) {
           setCompany(data.company);
         }
@@ -72,15 +81,15 @@ export function CompanyResearchClient({
           setVisibleCount(5);
           toast.success("Feed refreshed with latest publications");
         }
+        return fetchedPapers;
       } catch (err: unknown) {
         const message =
           err instanceof Error
             ? err.message
             : "An unexpected error occurred while fetching updates.";
         setError(message);
-        if (force) {
-          toast.error("Failed to refresh feed");
-        }
+        toast.error(force ? "Failed to refresh feed" : message);
+        return null;
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -94,9 +103,14 @@ export function CompanyResearchClient({
     if (visibleCount < papers.length) {
       setVisibleCount((prev) => Math.min(prev + 5, papers.length));
     } else {
-      const newLimit = papers.length + 5;
-      await fetchPapers(false, undefined, newLimit);
-      setVisibleCount(newLimit);
+      const newLimit = Math.min(papers.length + 5, 50);
+      const fetched = await fetchPapers(false, undefined, newLimit);
+      if (fetched) {
+        setVisibleCount(Math.min(visibleCount + 5, fetched.length));
+        if (fetched.length <= papers.length) {
+          setHasMore(false);
+        }
+      }
     }
   };
 
@@ -233,6 +247,25 @@ export function CompanyResearchClient({
           />
         ) : (
           <div className="space-y-4">
+            {error && (
+              <div
+                role="alert"
+                className="flex items-center justify-between gap-3 rounded-xl border border-danger/20 bg-danger/5 px-4 py-3 text-xs text-foreground"
+              >
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-danger shrink-0" />
+                  <span>{error}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setError(null)}
+                  className="text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
             {papers.slice(0, visibleCount).map((paper) => (
               <PaperCard
                 key={paper.id || paper.sourceUrl}
@@ -241,7 +274,7 @@ export function CompanyResearchClient({
               />
             ))}
 
-            {visibleCount < papers.length || papers.length === 10 ? (
+            {visibleCount < papers.length || hasMore ? (
               <div className="mt-8 flex justify-center">
                 <button
                   type="button"
