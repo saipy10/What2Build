@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { CompanyConfig } from "@/lib/companies";
@@ -15,6 +15,17 @@ interface HomeClientProps {
 
 export function HomeClient({ companies, faqs }: HomeClientProps) {
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+
+  useEffect(() => {
+    if (!showHowItWorks) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowHowItWorks(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showHowItWorks]);
 
   return (
     <>

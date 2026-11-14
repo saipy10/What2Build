@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useId } from "react";
+import React, { useState, useId, useRef, useEffect } from "react";
 import {
   Check,
   ChevronDown,
@@ -30,8 +30,17 @@ export function ProjectIdeaCard({ idea, index }: ProjectIdeaCardProps) {
   const [showFullDesc, setShowFullDesc] = useState(false);
   const [showResearch, setShowResearch] = useState(false);
   const [copied, setCopied] = useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const detailsId = useId();
   const descId = useId();
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleCopyDetails = async () => {
     try {
@@ -74,7 +83,10 @@ The idea above represents the initial seed and core concept. Based on it, please
       await navigator.clipboard.writeText(contentToCopy);
       setCopied(true);
       toast.success("Copied full project details to clipboard");
-      setTimeout(() => setCopied(false), 2000);
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error("Failed to copy project details");
     }

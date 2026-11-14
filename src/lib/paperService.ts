@@ -18,6 +18,49 @@ export async function getCompanyPapers(
 
   const isResearchOnly = filterType === "research";
   const cacheKey = `${companySlug}:${filterType}`;
+  const targetContentType = isResearchOnly ? "research" : "blog";
+  let discovered: DiscoveredPaper[] | null = null;
+
+  const discoverPapers = async (): Promise<DiscoveredPaper[]> => {
+    if (discovered !== null) {
+      return discovered;
+    }
+    const fetchCount = Math.max(limit, 20);
+    discovered = isResearchOnly
+      ? await fetchArxivPapers(companySlug, fetchCount)
+      : await fetchCompanyBlogs(companySlug, fetchCount);
+    return discovered;
+  };
+
+  interface DbPaperRow {
+    id: string;
+    company_id: string;
+    title: string;
+    description: string;
+    published_at: string;
+    authors?: string[] | null;
+    source_url: string;
+    external_id?: string | null;
+    category?: string | null;
+    content_type?: "blog" | "research" | null;
+    created_at: string;
+    updated_at: string;
+  }
+
+  const mapDbPaper = (p: DbPaperRow) => ({
+    id: p.id,
+    companyId: p.company_id,
+    title: p.title,
+    description: p.description,
+    publishedAt: new Date(p.published_at),
+    authors: p.authors || [],
+    sourceUrl: p.source_url,
+    externalId: p.external_id,
+    category: p.category,
+    contentType: p.content_type,
+    createdAt: new Date(p.created_at),
+    updatedAt: new Date(p.updated_at),
+  });
 
   // 1. Try Supabase if configured
   if (supabaseAdmin) {
@@ -52,45 +95,49 @@ export async function getCompanyPapers(
       }
 
       if (companyId) {
-        const { data: cachedDbPapers } = await supabaseAdmin
+        let cacheQuery = supabaseAdmin
           .from("papers")
           .select("*")
           .eq("company_id", companyId)
           .order("published_at", { ascending: false })
           .limit(limit);
 
+        if (filterType !== "all") {
+          cacheQuery = cacheQuery.eq("content_type", targetContentType);
+        }
+
+        const { data: cachedDbPapers } = await cacheQuery;
+
+        const memLastRefreshed = memoryDb.getLastRefreshed(cacheKey);
+        const latestDbPaperTime =
+          cachedDbPapers && cachedDbPapers.length > 0
+            ? Math.max(
+                ...cachedDbPapers.map((p) =>
+                  new Date(p.updated_at || p.created_at || 0).getTime()
+                )
+              )
+            : 0;
+        const lastFilterRefreshTime = memLastRefreshed
+          ? memLastRefreshed.getTime()
+          : latestDbPaperTime;
+
         const hasValidCache =
           !forceRefresh &&
           cachedDbPapers &&
-          cachedDbPapers.length >= 3 &&
-          companyData?.updated_at &&
-          Date.now() - new Date(companyData.updated_at).getTime() < CACHE_TTL_MS;
+          cachedDbPapers.length > 0 &&
+          lastFilterRefreshTime > 0 &&
+          Date.now() - lastFilterRefreshTime < CACHE_TTL_MS;
 
         if (hasValidCache) {
-          return cachedDbPapers.map((p) => ({
-            id: p.id,
-            companyId: p.company_id,
-            title: p.title,
-            description: p.description,
-            publishedAt: new Date(p.published_at),
-            authors: p.authors || [],
-            sourceUrl: p.source_url,
-            externalId: p.external_id,
-            category: p.category,
-            contentType: p.content_type,
-            createdAt: new Date(p.created_at),
-            updatedAt: new Date(p.updated_at),
-          }));
+          return cachedDbPapers.map(mapDbPaper);
         }
 
-        // Fetch fresh papers from source (fetch up to requested limit or 20)
-        const fetchCount = Math.max(limit, 20);
-        const discovered: DiscoveredPaper[] = isResearchOnly
-          ? await fetchArxivPapers(companySlug, fetchCount)
-          : await fetchCompanyBlogs(companySlug, fetchCount);
+        // Fetch fresh papers from source (at most once per call)
+        const liveDiscovered = await discoverPapers();
 
-        if (discovered.length > 0) {
-          const rowsToUpsert = discovered.map((p) => ({
+        if (liveDiscovered.length > 0) {
+          const nowIso = new Date().toISOString();
+          const rowsToUpsert = liveDiscovered.map((p) => ({
             company_id: companyId,
             title: p.title,
             description: p.description,
@@ -99,7 +146,8 @@ export async function getCompanyPapers(
             source_url: p.sourceUrl,
             external_id: p.externalId,
             category: p.category,
-            content_type: p.contentType || (isResearchOnly ? "research" : "blog"),
+            content_type: p.contentType || targetContentType,
+            updated_at: nowIso,
           }));
 
           await supabaseAdmin.from("papers").upsert(rowsToUpsert, {
@@ -108,32 +156,29 @@ export async function getCompanyPapers(
 
           await supabaseAdmin
             .from("companies")
-            .update({ updated_at: new Date().toISOString() })
+            .update({ updated_at: nowIso })
             .eq("id", companyId);
 
-          const { data: refreshedPapers } = await supabaseAdmin
+          memoryDb.setLastRefreshed(cacheKey, new Date());
+
+          let refreshQuery = supabaseAdmin
             .from("papers")
             .select("*")
             .eq("company_id", companyId)
             .order("published_at", { ascending: false })
             .limit(limit);
 
-          if (refreshedPapers && refreshedPapers.length > 0) {
-            return refreshedPapers.map((p) => ({
-              id: p.id,
-              companyId: p.company_id,
-              title: p.title,
-              description: p.description,
-              publishedAt: new Date(p.published_at),
-              authors: p.authors || [],
-              sourceUrl: p.source_url,
-              externalId: p.external_id,
-              category: p.category,
-              contentType: p.content_type,
-              createdAt: new Date(p.created_at),
-              updatedAt: new Date(p.updated_at),
-            }));
+          if (filterType !== "all") {
+            refreshQuery = refreshQuery.eq("content_type", targetContentType);
           }
+
+          const { data: refreshedPapers } = await refreshQuery;
+
+          if (refreshedPapers && refreshedPapers.length > 0) {
+            return refreshedPapers.map(mapDbPaper);
+          }
+        } else {
+          return cachedDbPapers ? cachedDbPapers.map(mapDbPaper) : [];
         }
       }
     } catch (err) {
@@ -157,7 +202,7 @@ export async function getCompanyPapers(
   const lastRefreshed = memoryDb.getLastRefreshed(cacheKey);
   const isFresh =
     !forceRefresh &&
-    cachedPapers.length >= 3 &&
+    cachedPapers.length > 0 &&
     lastRefreshed &&
     Date.now() - lastRefreshed.getTime() < CACHE_TTL_MS;
 
@@ -165,12 +210,9 @@ export async function getCompanyPapers(
     return cachedPapers.slice(0, limit);
   }
 
-  const fetchCount = Math.max(limit, 20);
-  const discovered: DiscoveredPaper[] = isResearchOnly
-    ? await fetchArxivPapers(companySlug, fetchCount)
-    : await fetchCompanyBlogs(companySlug, fetchCount);
+  const fallbackDiscovered = await discoverPapers();
 
-  const memoryPapers = discovered.map((p, idx) => ({
+  const memoryPapers = fallbackDiscovered.map((p, idx) => ({
     id: `${companySlug}-${filterType}-${idx}-${Buffer.from(p.sourceUrl).toString("base64").slice(0, 12)}`,
     companyId: cacheKey,
     title: p.title,

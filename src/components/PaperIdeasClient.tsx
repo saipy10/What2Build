@@ -7,6 +7,7 @@ import {
   ExternalLink,
   RefreshCw,
   ChevronDown,
+  AlertCircle,
 } from "lucide-react";
 import { ProjectIdeaCard, ProjectIdeaData } from "@/components/ProjectIdeaCard";
 import { LoadingState, ErrorState, EmptyState } from "@/components/States";
@@ -50,7 +51,17 @@ export function PaperIdeasClient({ paperId }: { paperId: string }) {
       }
       setPaper(paperData.paper);
 
-      // 2. Fetch or generate ideas
+      // 2. Check cached ideas before triggering generation
+      const cacheRes = await fetch(`/api/papers/${paperId}/ideas`);
+      if (cacheRes.ok) {
+        const cacheData = await cacheRes.json();
+        if (cacheData.success && Array.isArray(cacheData.ideas) && cacheData.ideas.length > 0) {
+          setIdeas(cacheData.ideas);
+          return;
+        }
+      }
+
+      // 3. Synthesize ideas when cache is empty
       const ideasRes = await fetch(`/api/papers/${paperId}/ideas`, {
         method: "POST",
       });
@@ -240,8 +251,11 @@ export function PaperIdeasClient({ paperId }: { paperId: string }) {
           count={3}
           message="Analyzing publication and synthesizing engineering projects..."
         />
-      ) : error ? (
-        <ErrorState message={error} onRetry={fetchPaperAndIdeas} />
+      ) : error && ideas.length === 0 ? (
+        <ErrorState
+          message={error}
+          onRetry={paper ? handleRegenerate : fetchPaperAndIdeas}
+        />
       ) : ideas.length === 0 ? (
         <EmptyState
           title="No project ideas generated yet"
@@ -250,13 +264,44 @@ export function PaperIdeasClient({ paperId }: { paperId: string }) {
           onAction={handleRegenerate}
         />
       ) : (
-        <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {ideas.map((idea, index) => (
-            <StaggerItem key={idea.id || `idea-${index}`}>
-              <ProjectIdeaCard idea={idea} index={index} />
-            </StaggerItem>
-          ))}
-        </StaggerContainer>
+        <div className="space-y-6">
+          {error && (
+            <div
+              role="alert"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger/20 bg-danger/5 px-4 py-3 text-xs text-foreground"
+            >
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-danger shrink-0" />
+                <span>{error}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleRegenerate}
+                  disabled={regenerating}
+                  className="font-medium text-foreground underline hover:opacity-80 disabled:opacity-50 cursor-pointer"
+                >
+                  Retry
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setError(null)}
+                  className="text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
+
+          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {ideas.map((idea, index) => (
+              <StaggerItem key={idea.id || `idea-${index}`}>
+                <ProjectIdeaCard idea={idea} index={index} />
+              </StaggerItem>
+            ))}
+          </StaggerContainer>
+        </div>
       )}
     </div>
   );
