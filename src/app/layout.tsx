@@ -3,6 +3,7 @@ import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Providers } from "@/components/Providers";
+import { FeedbackButton } from "@/components/FeedbackButton";
 import { SITE_CONFIG } from "@/lib/seo-config";
 import Link from "next/link";
 import { Analytics } from "@vercel/analytics/next";
@@ -127,6 +128,7 @@ export default function RootLayout({
             </div>
           </footer>
         </Providers>
+        <FeedbackButton />
         <Analytics />
       </body>
     </html>
