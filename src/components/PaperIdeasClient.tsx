@@ -15,6 +15,7 @@ import { CompanyLogo } from "@/components/CompanyLogos";
 import { StaggerContainer, StaggerItem } from "@/components/Reveal";
 import { AnimatePresence } from "motion/react";
 import { toast } from "sonner";
+import { trackUserError } from "@/lib/analytics";
 
 interface PaperDetails {
   id: string;
@@ -75,6 +76,11 @@ export function PaperIdeasClient({ paperId }: { paperId: string }) {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to generate project ideas.";
       setError(message);
+      trackUserError({
+        errorType: "paper_ideas_fetch_error",
+        message,
+        context: paperId,
+      });
     } finally {
       setLoading(false);
     }
@@ -99,6 +105,11 @@ export function PaperIdeasClient({ paperId }: { paperId: string }) {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Regeneration failed.";
       setError(message);
+      trackUserError({
+        errorType: "paper_ideas_regenerate_error",
+        message,
+        context: paperId,
+      });
       toast.error("Could not regenerate ideas");
     } finally {
       setRegenerating(false);
