@@ -13,6 +13,7 @@ import { PaperCard, PaperData } from "@/components/PaperCard";
 import { LoadingState, ErrorState, EmptyState } from "@/components/States";
 import { RefreshButton } from "@/components/RefreshButton";
 import { CompanyLogo } from "@/components/CompanyLogos";
+import { trackUserError } from "@/lib/analytics";
 import { FaqSection, FaqItem } from "@/components/FaqSection";
 import { toast } from "sonner";
 import { CompanyConfig } from "@/lib/companies";
@@ -88,6 +89,11 @@ export function CompanyResearchClient({
             ? err.message
             : "An unexpected error occurred while fetching updates.";
         setError(message);
+        trackUserError({
+          errorType: force ? "company_papers_refresh_error" : "company_papers_fetch_error",
+          message,
+          context: `${companySlug}:${activeFilter}`,
+        });
         toast.error(force ? "Failed to refresh feed" : message);
         return null;
       } finally {
