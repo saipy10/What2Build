@@ -52,10 +52,22 @@ export const memoryDb = {
   },
   getPapersByCompany: (companySlug: string) => memoryStore.papers.get(companySlug) || [],
   savePapers: (papers: MemoryPaper[]) => {
+    const byCompany = new Map<string, MemoryPaper[]>();
     for (const paper of papers) {
-      const existing = memoryStore.papers.get(paper.companyId) || [];
-      const updated = [paper, ...existing.filter((p) => p.sourceUrl !== paper.sourceUrl)];
-      memoryStore.papers.set(paper.companyId, updated);
+      const group = byCompany.get(paper.companyId) || [];
+      group.push(paper);
+      byCompany.set(paper.companyId, group);
+    }
+    for (const [companyId, incoming] of byCompany) {
+      const incomingUrls = new Set(incoming.map((p) => p.sourceUrl));
+      const existing = (memoryStore.papers.get(companyId) || []).filter(
+        (p) => !incomingUrls.has(p.sourceUrl)
+      );
+      // Keep the store sorted latest -> oldest so cached slices are the newest items.
+      const merged = [...incoming, ...existing].sort(
+        (a, b) => b.publishedAt.getTime() - a.publishedAt.getTime()
+      );
+      memoryStore.papers.set(companyId, merged);
     }
   },
   getPaperById: (id: string): MemoryPaper | undefined => {
