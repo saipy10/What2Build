@@ -39,7 +39,7 @@ export function HomeClient({ companies, faqs }: HomeClientProps) {
       <section className="mb-20 sm:mb-24 max-w-3xl">
         <Reveal>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-[-0.02em] text-foreground leading-[1.1]">
-            ReadEngg and
+            ReadEngg,
             <br />
             BuildEngg
           </h1>
