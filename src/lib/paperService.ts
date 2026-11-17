@@ -5,11 +5,27 @@ import { SUPPORTED_COMPANIES } from "./companies";
 
 const CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
 
+/**
+ * Returns papers ordered latest -> oldest regardless of the source
+ * (Supabase, in-memory cache, or freshly crawled).
+ */
 export async function getCompanyPapers(
   companySlug: string,
   forceRefresh = false,
   filterType: "all" | "blog" | "research" = "blog",
   limit = 20
+) {
+  const papers = await loadCompanyPapers(companySlug, forceRefresh, filterType, limit);
+  return [...papers].sort(
+    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+  );
+}
+
+async function loadCompanyPapers(
+  companySlug: string,
+  forceRefresh: boolean,
+  filterType: "all" | "blog" | "research",
+  limit: number
 ) {
   const config = SUPPORTED_COMPANIES[companySlug];
   if (!config) {
@@ -230,7 +246,7 @@ export async function getCompanyPapers(
   memoryDb.savePapers(memoryPapers);
   memoryDb.setLastRefreshed(cacheKey, new Date());
 
-  return memoryPapers.slice(0, limit);
+  return memoryDb.getPapersByCompany(cacheKey).slice(0, limit);
 }
 
 export async function getPaperById(paperId: string) {

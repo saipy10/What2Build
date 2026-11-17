@@ -87,7 +87,10 @@ export function CompanyResearchClient({
           );
         }
 
-        const fetchedPapers: PaperData[] = data.papers || [];
+        const fetchedPapers: PaperData[] = [...(data.papers || [])].sort(
+          (a: PaperData, b: PaperData) =>
+            new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+        );
         setPapers(fetchedPapers);
         setHasMore(fetchedPapers.length >= requestedLimit && requestedLimit < 50);
         if (data.company) {

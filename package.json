@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "test": "node --experimental-strip-types --no-warnings --test src/lib/latestRequest.test.ts"
+    "lint": "eslint"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.109",
