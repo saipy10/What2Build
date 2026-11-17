@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { LatestRequestGuard } from "@/lib/latestRequest";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -39,6 +40,14 @@ export function CompanyResearchClient({
   const [error, setError] = useState<string | null>(null);
   const [filterMode, setFilterMode] = useState<"blog" | "research">("blog");
 
+  const guardRef = useRef(new LatestRequestGuard());
+
+  // Cancel any in-flight request on unmount.
+  useEffect(() => {
+    const guard = guardRef.current;
+    return () => guard.cancel();
+  }, []);
+
   const fetchPapers = useCallback(
     async (
       force = false,
@@ -46,6 +55,7 @@ export function CompanyResearchClient({
       requestedLimit = 10
     ): Promise<PaperData[] | null> => {
       const activeFilter = filterOverride || filterMode;
+      const { signal, isCurrent } = guardRef.current.start();
       try {
         if (force) {
           setRefreshing(true);
@@ -63,8 +73,13 @@ export function CompanyResearchClient({
           : `/api/companies/${companySlug}/papers?filter=${activeFilter}&limit=${requestedLimit}`;
 
         const method = force ? "POST" : "GET";
-        const res = await fetch(endpoint, { method });
+        const res = await fetch(endpoint, { method, signal });
         const data = await res.json();
+
+        // A newer request (e.g. tab switch) superseded this one: discard.
+        if (!isCurrent()) return null;
+        // Defensive: never render a response meant for the other tab.
+        if (data.filter && data.filter !== activeFilter) return null;
 
         if (!res.ok || !data.success) {
           throw new Error(
@@ -84,6 +99,9 @@ export function CompanyResearchClient({
         }
         return fetchedPapers;
       } catch (err: unknown) {
+        if (!isCurrent() || (err instanceof DOMException && err.name === "AbortError")) {
+          return null;
+        }
         const message =
           err instanceof Error
             ? err.message
@@ -97,9 +115,11 @@ export function CompanyResearchClient({
         toast.error(force ? "Failed to refresh feed" : message);
         return null;
       } finally {
-        setLoading(false);
-        setRefreshing(false);
-        setLoadingMore(false);
+        if (isCurrent()) {
+          setLoading(false);
+          setRefreshing(false);
+          setLoadingMore(false);
+        }
       }
     },
     [companySlug, filterMode]
