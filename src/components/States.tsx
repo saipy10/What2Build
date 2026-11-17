@@ -1,6 +1,11 @@
+"use client";
+
 import React from "react";
 import { AlertCircle, Inbox, RefreshCw } from "lucide-react";
-import { PaperCardSkeleton, ProjectIdeaCardSkeleton } from "./Skeleton";
+import { DotLottieReact, setWasmUrl } from "@lottiefiles/dotlottie-react";
+import { ProjectIdeaCardSkeleton } from "./Skeleton";
+
+setWasmUrl("/dotlottie-player.wasm");
 
 export function LoadingState({
   message = "Loading...",
@@ -11,15 +16,37 @@ export function LoadingState({
   type?: "paper" | "idea";
   count?: number;
 }) {
+  if (type === "paper") {
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        className="flex flex-col items-center justify-center rounded-2xl border border-border bg-surface px-4 py-12 sm:px-8 sm:py-16 md:py-20 text-center"
+      >
+        <div className="w-full max-w-[200px] sm:max-w-[260px] md:max-w-[300px] aspect-[350/250] flex items-center justify-center">
+          <DotLottieReact
+            src="/search.lottie"
+            loop
+            autoplay
+            className="w-full h-full"
+          />
+        </div>
+        <p className="mt-4 text-xs sm:text-sm font-mono text-muted-foreground max-w-xs sm:max-w-md">
+          {message}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="text-xs font-mono text-muted-foreground pb-1">
         {message}
       </div>
-      <div className={type === "idea" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {Array.from({ length: count }).map((_, i) => (
           <div key={i}>
-            {type === "idea" ? <ProjectIdeaCardSkeleton /> : <PaperCardSkeleton />}
+            <ProjectIdeaCardSkeleton />
           </div>
         ))}
       </div>

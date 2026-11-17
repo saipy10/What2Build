@@ -241,8 +241,12 @@ export function CompanyResearchClient({
 
       {/* Main content list */}
       <main>
-        {loading && !refreshing && papers.length === 0 ? (
-          <LoadingState message={`Fetching publications for ${company.name}...`} />
+        {(loading && papers.length === 0) || refreshing ? (
+          <LoadingState
+            message={`Searching ${
+              filterMode === "research" ? "research papers" : "engineering blogs"
+            } for ${company.name}...`}
+          />
         ) : error && papers.length === 0 ? (
           <ErrorState message={error} onRetry={() => fetchPapers(false)} />
         ) : papers.length === 0 ? (
