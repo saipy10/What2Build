@@ -201,7 +201,12 @@ export function CompanyResearchClient({
         </div>
 
         {/* Links & Refresh */}
-        <div className="flex flex-wrap items-center gap-3 shrink-0">
+        <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
+          <RefreshButton
+            onRefresh={() => fetchPapers(true)}
+            isLoading={refreshing}
+            label="Sync Feed"
+          />
           {company.blogUrl && (
             <a
               href={company.blogUrl}
@@ -224,11 +229,6 @@ export function CompanyResearchClient({
             <span>Research Hub</span>
             <ExternalLink className="h-3 w-3 text-muted-foreground" />
           </a>
-          <RefreshButton
-            onRefresh={() => fetchPapers(true)}
-            isLoading={refreshing}
-            label="Sync Feed"
-          />
         </div>
       </header>
 
@@ -257,7 +257,7 @@ export function CompanyResearchClient({
             }`}
           >
             <BookOpen className="h-3.5 w-3.5" />
-            <span>Research Papers (arXiv)</span>
+            <span>Research Papers</span>
           </button>
         </div>
       </div>

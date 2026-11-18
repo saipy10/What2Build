@@ -78,9 +78,6 @@ export function HomeClient({ companies, faqs }: HomeClientProps) {
           <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
             Companies &amp; Engineering Blogs
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {companies.length} prominent engineering organizations and research labs
-          </p>
         </Reveal>
 
         <StaggerContainer useInView className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -89,8 +86,6 @@ export function HomeClient({ companies, faqs }: HomeClientProps) {
               <CompanyCard
                 name={comp.name}
                 slug={comp.slug}
-                tagline={comp.tagline}
-                description={comp.description}
               />
             </StaggerItem>
           ))}

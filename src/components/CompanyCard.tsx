@@ -8,8 +8,8 @@ import { CompanyLogo } from "@/components/CompanyLogos";
 interface CompanyCardProps {
   name: string;
   slug: string;
-  tagline: string;
-  description: string;
+  tagline?: string;
+  description?: string;
   researchUrl?: string;
   iconName?: string;
   papersCount?: number;
@@ -18,7 +18,6 @@ interface CompanyCardProps {
 export function CompanyCard({
   name,
   slug,
-  tagline,
 }: CompanyCardProps) {
   return (
     <div className="h-full transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98]">
@@ -27,7 +26,7 @@ export function CompanyCard({
         className="group relative flex h-full flex-col justify-between rounded-xl border border-border bg-surface p-6 shadow-xs transition-colors hover:border-border-strong hover:shadow-sm"
       >
         <div>
-          <div className="flex items-center gap-3.5 mb-4">
+          <div className="flex items-center gap-3.5">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-surface-elevated p-2 text-foreground shadow-xs">
               <CompanyLogo slug={slug} className="w-full h-full text-foreground" />
             </div>
@@ -37,10 +36,6 @@ export function CompanyCard({
               </h3>
             </div>
           </div>
-
-          <p className="text-sm text-muted-foreground line-clamp-1 leading-relaxed">
-            {tagline}
-          </p>
         </div>
 
         <div className="mt-6 flex items-center justify-between text-xs font-medium text-muted-foreground pt-4 border-t border-border group-hover:text-foreground transition-colors">
