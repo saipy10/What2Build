@@ -122,6 +122,14 @@ async function loadCompanyPapers(
           cacheQuery = cacheQuery.eq("content_type", targetContentType);
         }
 
+        if (companySlug === "huggingface") {
+          if (targetContentType === "blog") {
+            cacheQuery = cacheQuery.eq("category", "Community Blog");
+          } else if (targetContentType === "research") {
+            cacheQuery = cacheQuery.like("source_url", "https://huggingface.co/blog%");
+          }
+        }
+
         const { data: cachedDbPapers } = await cacheQuery;
 
         const memLastRefreshed = memoryDb.getLastRefreshed(cacheKey);
@@ -186,6 +194,14 @@ async function loadCompanyPapers(
 
           if (filterType !== "all") {
             refreshQuery = refreshQuery.eq("content_type", targetContentType);
+          }
+
+          if (companySlug === "huggingface") {
+            if (targetContentType === "blog") {
+              refreshQuery = refreshQuery.eq("category", "Community Blog");
+            } else if (targetContentType === "research") {
+              refreshQuery = refreshQuery.like("source_url", "https://huggingface.co/blog%");
+            }
           }
 
           const { data: refreshedPapers } = await refreshQuery;
