@@ -63,6 +63,10 @@ export async function fetchCompanyBlogs(companySlug: string, count = 10): Promis
       return await fetchAnthropicNewsBlogs(count);
     }
 
+    if (companySlug === "huggingface") {
+      return await fetchHuggingFaceCommunityBlogs(count);
+    }
+
     if (config.blogFeedUrl) {
       return await fetchRssBlogs(companySlug, config.blogFeedUrl, count);
     }
@@ -185,6 +189,222 @@ async function fetchAnthropicNewsBlogs(count: number): Promise<DiscoveredPaper[]
   }
 
   return items.slice(0, count);
+}
+
+interface HuggingFaceAuthorData {
+  fullname?: string;
+  name?: string;
+}
+
+interface HuggingFaceBlogPost {
+  _id?: string;
+  slug?: string;
+  title?: string;
+  description?: string;
+  summary?: string;
+  publishedAt?: string;
+  editedAt?: string;
+  url?: string;
+  upvotes?: number;
+  tags?: string[];
+  authorsData?: HuggingFaceAuthorData[];
+}
+
+function decodeHtmlEntities(raw: string): string {
+  if (!raw) return "";
+  return raw
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, "&")
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)));
+}
+
+function extractHuggingFaceHydraterProps<T>(html: string, target: string): T | null {
+  const escapedTarget = target.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const forwardRegex = new RegExp(
+    `data-target="${escapedTarget}"\\s+data-props="([^"]+)"`
+  );
+  const reverseRegex = new RegExp(
+    `data-props="([^"]+)"\\s+data-target="${escapedTarget}"`
+  );
+  const match = html.match(forwardRegex) || html.match(reverseRegex);
+  if (!match?.[1]) {
+    return null;
+  }
+  try {
+    return JSON.parse(decodeHtmlEntities(match[1])) as T;
+  } catch {
+    return null;
+  }
+}
+
+function mapHuggingFacePost(
+  post: HuggingFaceBlogPost,
+  contentType: "blog" | "research",
+  defaultCategory: string
+): DiscoveredPaper | null {
+  const title = cleanHtml(post.title || "");
+  if (!title) return null;
+
+  const authors =
+    Array.isArray(post.authorsData) && post.authorsData.length > 0
+      ? post.authorsData
+          .map((a) => cleanHtml(a.fullname || a.name || ""))
+          .filter(Boolean)
+      : [contentType === "research" ? "Hugging Face Research" : "Hugging Face Community"];
+
+  const rawUrl = post.url || (post.slug ? `/blog/${post.slug}` : "");
+  if (!rawUrl) return null;
+
+  const sourceUrl = rawUrl.startsWith("http")
+    ? rawUrl
+    : `https://huggingface.co${rawUrl.startsWith("/") ? "" : "/"}${rawUrl}`;
+
+  const publishedAt = new Date(post.publishedAt || post.editedAt || Date.now());
+  const rawDescription = cleanHtml(post.description || post.summary || "");
+
+  let description = rawDescription;
+  if (!description || description.length < 20) {
+    const authorLabel = authors.slice(0, 3).join(", ");
+    const extraTags = Array.isArray(post.tags)
+      ? post.tags.filter((t) => t && t.toLowerCase() !== "research")
+      : [];
+    const tagSuffix = extraTags.length > 0 ? ` Topics: ${extraTags.join(", ")}.` : "";
+    description =
+      contentType === "research"
+        ? `Hugging Face research publication by ${authorLabel} exploring "${title}".${tagSuffix}`
+        : `Community engineering blog post on Hugging Face by ${authorLabel} covering "${title}".${tagSuffix}`;
+  } else if (description.length > 320) {
+    description = description.slice(0, 320) + "...";
+  }
+
+  return {
+    title,
+    description,
+    publishedAt: isNaN(publishedAt.getTime()) ? new Date() : publishedAt,
+    authors: authors.slice(0, 8),
+    sourceUrl,
+    externalId: post._id || rawUrl || post.slug,
+    category: defaultCategory,
+    contentType,
+  };
+}
+
+/**
+ * Fetch engineering blogs from Hugging Face's Community section (https://huggingface.co/blog/community).
+ */
+async function fetchHuggingFaceCommunityBlogs(count: number): Promise<DiscoveredPaper[]> {
+  const pagesToFetch = Math.min(Math.max(Math.ceil(count / 20), 1), 3);
+  const pageIndices = Array.from({ length: pagesToFetch }, (_, i) => i);
+
+  const htmlPages = await Promise.all(
+    pageIndices.map(async (pageIdx) => {
+      const url =
+        pageIdx === 0
+          ? "https://huggingface.co/blog/community"
+          : `https://huggingface.co/blog/community?p=${pageIdx}`;
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        },
+        next: { revalidate: 1800 },
+      });
+      if (!res.ok) {
+        if (pageIdx === 0) {
+          throw new Error(`Hugging Face community blog returned status ${res.status}`);
+        }
+        return "";
+      }
+      return res.text();
+    })
+  );
+
+  const collected: DiscoveredPaper[] = [];
+  const seen = new Set<string>();
+
+  for (const html of htmlPages) {
+    if (!html) continue;
+    const props = extractHuggingFaceHydraterProps<{ posts?: HuggingFaceBlogPost[] }>(
+      html,
+      "CommunityBlogsContainer"
+    );
+    const posts = Array.isArray(props?.posts) ? props.posts : [];
+    for (const post of posts) {
+      const mapped = mapHuggingFacePost(post, "blog", "Community Blog");
+      if (!mapped) continue;
+      const key = (mapped.sourceUrl || mapped.title).toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      collected.push(mapped);
+    }
+  }
+
+  if (collected.length === 0) {
+    return getFallbackCuratedBlogs("huggingface");
+  }
+
+  return collected.slice(0, count);
+}
+
+/**
+ * Fetch research articles from Hugging Face's Research blog section (https://huggingface.co/blog?tag=research).
+ */
+async function fetchHuggingFaceResearchBlogs(count: number): Promise<DiscoveredPaper[]> {
+  const pagesToFetch = Math.min(Math.max(Math.ceil(count / 14), 1), 4);
+  const pageIndices = Array.from({ length: pagesToFetch }, (_, i) => i);
+
+  const htmlPages = await Promise.all(
+    pageIndices.map(async (pageIdx) => {
+      const url =
+        pageIdx === 0
+          ? "https://huggingface.co/blog?tag=research"
+          : `https://huggingface.co/blog?tag=research&p=${pageIdx}`;
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        },
+        next: { revalidate: 1800 },
+      });
+      if (!res.ok) {
+        if (pageIdx === 0) {
+          throw new Error(`Hugging Face research blog returned status ${res.status}`);
+        }
+        return "";
+      }
+      return res.text();
+    })
+  );
+
+  const collected: DiscoveredPaper[] = [];
+  const seen = new Set<string>();
+
+  for (const html of htmlPages) {
+    if (!html) continue;
+    const props = extractHuggingFaceHydraterProps<{ allBlogs?: HuggingFaceBlogPost[] }>(
+      html,
+      "Articles"
+    );
+    const posts = Array.isArray(props?.allBlogs) ? props.allBlogs : [];
+    for (const post of posts) {
+      const mapped = mapHuggingFacePost(post, "research", "Research");
+      if (!mapped) continue;
+      const key = (mapped.sourceUrl || mapped.title).toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      collected.push(mapped);
+    }
+  }
+
+  if (collected.length === 0) {
+    return getFallbackCuratedPapers("huggingface");
+  }
+
+  return collected.slice(0, count);
 }
 
 export function getFallbackCuratedBlogs(companySlug: string): DiscoveredPaper[] {
@@ -358,13 +578,23 @@ export function getFallbackCuratedBlogs(companySlug: string): DiscoveredPaper[] 
     case "huggingface":
       return [
         {
-          title: "Optimizing Transformer Inference with FlashAttention and Quantization",
-          description: "Practical guide to running 70B+ parameter open LLMs with 4-bit AWQ and vLLM acceleration engines.",
+          title: "Harness adapters: Safe RL for efficient agentic development",
+          description: "Community engineering blog post on Hugging Face exploring safe reinforcement learning adapters and harness architectures for agentic workflows.",
           publishedAt: new Date(),
-          authors: ["Hugging Face Research"],
-          sourceUrl: "https://huggingface.co/blog",
-          externalId: "hf-transformer-opt",
-          category: "Open ML",
+          authors: ["Hugging Face Community"],
+          sourceUrl: "https://huggingface.co/blog/community",
+          externalId: "hf-community-harness-adapters",
+          category: "Community Blog",
+          contentType: "blog",
+        },
+        {
+          title: "Building a Local Kafka SRE Assistant: Retrieval vs Fine-Tuning",
+          description: "Practical engineering breakdown comparing domain-specific retrieval pipelines against LoRA fine-tuning for automated site reliability debugging.",
+          publishedAt: new Date(Date.now() - 86400000),
+          authors: ["Roman Melnyk"],
+          sourceUrl: "https://huggingface.co/blog/community",
+          externalId: "hf-community-kafka-sre",
+          category: "Community Blog",
           contentType: "blog",
         },
       ];
@@ -429,6 +659,15 @@ export async function fetchArxivPapers(companySlug: string, count = 10): Promise
   const config = SUPPORTED_COMPANIES[companySlug];
   if (!config) {
     throw new Error(`Unsupported company: ${companySlug}`);
+  }
+
+  if (companySlug === "huggingface") {
+    try {
+      return await fetchHuggingFaceResearchBlogs(count);
+    } catch (error) {
+      console.error(`Error discovering research blogs for ${companySlug}:`, error);
+      return getFallbackCuratedPapers(companySlug);
+    }
   }
 
   const query = encodeURIComponent(config.arxivQuery);
@@ -774,12 +1013,23 @@ export function getFallbackCuratedPapers(companySlug: string): DiscoveredPaper[]
     case "huggingface":
       return [
         {
-          title: "FineWeb: Decanting the Web for the Finest Text Data at Scale",
-          description: "Large-scale web dataset filtering, deduplication, and quality ablation studies for pretraining open-weight language models.",
-          publishedAt: new Date("2024-06-17"),
-          authors: ["Guilherme Penedo", "Hynek Kydlíček", "Leandro von Werra", "Thomas Wolf"],
-          sourceUrl: "https://arxiv.org/abs/2406.17557",
-          externalId: "arxiv:2406.17557",
+          title: "Announcing Project ProtoStar: Making Publicly Funded Science AI-Ready",
+          description: "Hugging Face research publication exploring open scientific datasets, benchmark reproducibility, and AI-ready research artifacts.",
+          publishedAt: new Date("2026-10-29"),
+          authors: ["Avijit Ghosh", "Sayeed Choudhury", "Irene Solaiman"],
+          sourceUrl: "https://huggingface.co/blog/announcing-project-protostar",
+          externalId: "hf-research-protostar",
+          category: "Research",
+          contentType: "research",
+        },
+        {
+          title: "What We Learned by Reproducing 2,200 Papers from ICML",
+          description: "Large-scale empirical analysis of open-source machine learning reproducibility, evaluation harnesses, and code release standards.",
+          publishedAt: new Date("2026-08-15"),
+          authors: ["Hugging Face Research"],
+          sourceUrl: "https://huggingface.co/blog?tag=research",
+          externalId: "hf-research-icml-repro",
+          category: "Research",
           contentType: "research",
         },
       ];
