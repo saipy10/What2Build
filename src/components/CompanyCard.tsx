@@ -34,8 +34,8 @@ export function CompanyCard({
           </h3>
         </div>
 
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface-elevated text-foreground dark:text-white transition-colors group-hover:border-blue-600 group-hover:bg-blue-600 group-hover:text-white">
-          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface-elevated text-foreground dark:text-white transition-all group-hover:translate-x-1 group-hover:border-blue-600 group-hover:bg-blue-600 group-hover:text-white">
+          <ArrowRight className="h-4 w-4" />
         </div>
       </Link>
     </div>
