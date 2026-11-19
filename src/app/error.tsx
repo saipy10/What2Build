@@ -20,7 +20,7 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-16">
+    <div className="w-full mx-auto px-4 sm:px-6 lg:px-10 xl:px-16 py-16">
       <ErrorState
         message={error.message || "Something went wrong."}
         onRetry={reset}

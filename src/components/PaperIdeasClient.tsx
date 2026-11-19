@@ -121,7 +121,7 @@ export function PaperIdeasClient({ paperId }: { paperId: string }) {
   }, [fetchPaperAndIdeas]);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+    <div className="mx-auto w-full px-4 sm:px-6 lg:px-10 xl:px-16 py-10 sm:py-16">
       {/* Breadcrumb Navigation */}
       <nav aria-label="Breadcrumb" className="mb-6">
         <ol className="flex items-center gap-2 text-xs text-muted-foreground">

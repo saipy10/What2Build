@@ -40,7 +40,7 @@ export function FaqSection({
         )}
       </div>
 
-      <div className="space-y-4 max-w-4xl" role="region" aria-label="FAQ Accordion">
+      <div className="space-y-4 w-full" role="region" aria-label="FAQ Accordion">
         {faqs.map((faq, idx) => {
           const isOpen = openIndex === idx;
           const contentId = `faq-content-${idx}`;

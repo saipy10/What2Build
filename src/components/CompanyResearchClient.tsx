@@ -148,7 +148,7 @@ export function CompanyResearchClient({
   }, [fetchPapers, filterMode]);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+    <div className="mx-auto w-full px-4 sm:px-6 lg:px-10 xl:px-16 py-10 sm:py-16">
       {/* Header section */}
       <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-8 border-b border-border">
         <div className="flex items-start gap-4">

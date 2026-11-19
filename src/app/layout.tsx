@@ -89,11 +89,11 @@ export default function RootLayout({
         </a>
         <Providers>
           <Navbar />
-          <main id="main-content" className="flex-1">
+          <main id="main-content" className="flex-1 w-full">
             {children}
           </main>
           <footer className="border-t border-border bg-background py-10 text-sm text-muted-foreground">
-            <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <div className="mx-auto w-full px-4 sm:px-6 lg:px-10 xl:px-16">
               <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                 <div>
                   <span className="font-semibold text-foreground tracking-tight text-base">What2Build</span>
