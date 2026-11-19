@@ -108,7 +108,7 @@ export default function HomePage() {
   return (
     <>
       <JsonLd items={jsonLdItems} />
-      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+      <div className="relative mx-auto w-full px-4 sm:px-6 lg:px-10 xl:px-16 py-16 sm:py-24">
         <HomeClient companies={companies} faqs={HOME_FAQS} />
       </div>
     </>

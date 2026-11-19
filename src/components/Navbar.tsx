@@ -75,7 +75,7 @@ export function Navbar() {
           : "border-b border-transparent bg-background"
       }`}
     >
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8 gap-3">
+      <div className="mx-auto flex h-14 w-full items-center justify-between px-4 sm:px-6 lg:px-10 xl:px-16 gap-3">
         {/* Brand & Search Bar */}
         <div className="flex items-center gap-3 sm:gap-4 flex-1 max-w-lg">
           <Link
