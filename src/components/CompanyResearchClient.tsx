@@ -273,10 +273,10 @@ export function CompanyResearchClient({
         </div>
       </header>
 
-      {/* Answer-first AEO summary block */}
+      {/* Answer-first AEO summary block (visually hidden) */}
       <section
         aria-label={`Summary of ${company.name} publications`}
-        className="mt-6 rounded-xl border border-border/80 bg-surface/60 p-4 sm:p-5"
+        className="sr-only"
       >
         <h2 className="text-sm font-semibold text-foreground">
           What does {company.name} publish and what can you build from it?

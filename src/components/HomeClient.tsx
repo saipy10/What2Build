@@ -63,8 +63,8 @@ export function HomeClient({ companies, faqs, lastUpdatedIso }: HomeClientProps)
           Turn AI research papers and engineering blogs into portfolio projects
         </h2>
 
-        {/* Answer-first summary (40-60 words) for search & answer engines */}
-        <p className="mt-3 text-sm sm:text-base text-muted-foreground leading-relaxed">
+        {/* Answer-first summary (visually hidden, kept in DOM for assistive tech & search/answer engines) */}
+        <p className="sr-only">
           What2Build is a free engineering portal for software developers, ML engineers, and CS
           students. It tracks official engineering blogs and academic research preprints across{" "}
           {companies.length} leading organizations—including {featuredCompanyNames}—and generates
@@ -86,13 +86,6 @@ export function HomeClient({ companies, faqs, lastUpdatedIso }: HomeClientProps)
             <span>Explore companies</span>
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </a>
-
-          <Link
-            href="/companies"
-            className="inline-flex items-center rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-medium text-foreground hover:bg-surface-elevated transition-colors"
-          >
-            All {companies.length} organizations
-          </Link>
 
           <button
             type="button"
