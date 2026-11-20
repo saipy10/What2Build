@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -8,64 +8,91 @@ import {
   RefreshCw,
   ChevronDown,
   AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import { ProjectIdeaCard, ProjectIdeaData } from "@/components/ProjectIdeaCard";
 import { LoadingState, ErrorState, EmptyState } from "@/components/States";
 import { CompanyLogo } from "@/components/CompanyLogos";
 import { StaggerContainer, StaggerItem } from "@/components/Reveal";
-import { AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { trackUserError } from "@/lib/analytics";
 
-interface PaperDetails {
+export interface PaperDetails {
   id: string;
   title: string;
   description: string;
   sourceUrl: string;
   authors: string[];
   publishedAt: string;
+  updatedAt?: string;
   company?: {
     name: string;
     slug: string;
   };
 }
 
-export function PaperIdeasClient({ paperId }: { paperId: string }) {
-  const [paper, setPaper] = useState<PaperDetails | null>(null);
-  const [ideas, setIdeas] = useState<ProjectIdeaData[]>([]);
-  const [loading, setLoading] = useState(true);
+interface PaperIdeasClientProps {
+  paperId: string;
+  initialPaper?: PaperDetails | null;
+  initialIdeas?: ProjectIdeaData[];
+  lastUpdatedIso?: string | null;
+}
+
+export function PaperIdeasClient({
+  paperId,
+  initialPaper = null,
+  initialIdeas = [],
+  lastUpdatedIso = null,
+}: PaperIdeasClientProps) {
+  const [paper, setPaper] = useState<PaperDetails | null>(initialPaper);
+  const [ideas, setIdeas] = useState<ProjectIdeaData[]>(initialIdeas);
+  const [loading, setLoading] = useState(
+    !initialPaper || initialIdeas.length === 0
+  );
   const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showFullAbstract, setShowFullAbstract] = useState(false);
+  const didInitRef = useRef(false);
 
   const fetchPaperAndIdeas = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // 1. Fetch paper details
-      const paperRes = await fetch(`/api/papers/${paperId}`);
-      const paperData = await paperRes.json();
+      // 1. Fetch paper details only if not already hydrated from SSR
+      if (!initialPaper) {
+        const paperRes = await fetch(`/api/papers/${encodeURIComponent(paperId)}`);
+        const paperData = await paperRes.json();
 
-      if (!paperRes.ok || !paperData.success) {
-        throw new Error(paperData.error || "Failed to load paper details");
+        if (!paperRes.ok || !paperData.success) {
+          throw new Error(paperData.error || "Failed to load paper details");
+        }
+        setPaper(paperData.paper);
       }
-      setPaper(paperData.paper);
 
-      // 2. Check cached ideas before triggering generation
-      const cacheRes = await fetch(`/api/papers/${paperId}/ideas`);
+      // 2. Check cached ideas before triggering AI generation
+      const cacheRes = await fetch(
+        `/api/papers/${encodeURIComponent(paperId)}/ideas`
+      );
       if (cacheRes.ok) {
         const cacheData = await cacheRes.json();
-        if (cacheData.success && Array.isArray(cacheData.ideas) && cacheData.ideas.length > 0) {
+        if (
+          cacheData.success &&
+          Array.isArray(cacheData.ideas) &&
+          cacheData.ideas.length > 0
+        ) {
           setIdeas(cacheData.ideas);
           return;
         }
       }
 
-      // 3. Synthesize ideas when cache is empty
-      const ideasRes = await fetch(`/api/papers/${paperId}/ideas`, {
-        method: "POST",
-      });
+      // 3. Synthesize ideas via AI only when cache is empty
+      const ideasRes = await fetch(
+        `/api/papers/${encodeURIComponent(paperId)}/ideas`,
+        {
+          method: "POST",
+        }
+      );
       const ideasData = await ideasRes.json();
 
       if (!ideasRes.ok || !ideasData.success) {
@@ -74,7 +101,8 @@ export function PaperIdeasClient({ paperId }: { paperId: string }) {
 
       setIdeas(ideasData.ideas || []);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to generate project ideas.";
+      const message =
+        err instanceof Error ? err.message : "Failed to generate project ideas.";
       setError(message);
       trackUserError({
         errorType: "paper_ideas_fetch_error",
@@ -84,16 +112,19 @@ export function PaperIdeasClient({ paperId }: { paperId: string }) {
     } finally {
       setLoading(false);
     }
-  }, [paperId]);
+  }, [paperId, initialPaper]);
 
   const handleRegenerate = async () => {
     try {
       setRegenerating(true);
       setError(null);
 
-      const res = await fetch(`/api/papers/${paperId}/ideas/regenerate`, {
-        method: "POST",
-      });
+      const res = await fetch(
+        `/api/papers/${encodeURIComponent(paperId)}/ideas/regenerate`,
+        {
+          method: "POST",
+        }
+      );
       const data = await res.json();
 
       if (!res.ok || !data.success) {
@@ -103,7 +134,8 @@ export function PaperIdeasClient({ paperId }: { paperId: string }) {
       setIdeas(data.ideas || []);
       toast.success("Generated new project ideas");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Regeneration failed.";
+      const message =
+        err instanceof Error ? err.message : "Regeneration failed.";
       setError(message);
       trackUserError({
         errorType: "paper_ideas_regenerate_error",
@@ -116,15 +148,45 @@ export function PaperIdeasClient({ paperId }: { paperId: string }) {
     }
   };
 
+  // Skip initial fetch completely when both paper & cached ideas were hydrated from SSR
   useEffect(() => {
-    fetchPaperAndIdeas();
-  }, [fetchPaperAndIdeas]);
+    if (didInitRef.current) return;
+    didInitRef.current = true;
+    if (!initialPaper || initialIdeas.length === 0) {
+      fetchPaperAndIdeas();
+    }
+  }, [fetchPaperAndIdeas, initialPaper, initialIdeas.length]);
+
+  const formattedPublished = paper?.publishedAt
+    ? new Date(paper.publishedAt).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "UTC",
+      })
+    : "";
+
+  const formattedLastUpdated = lastUpdatedIso
+    ? new Date(lastUpdatedIso).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "UTC",
+      })
+    : null;
+
+  const findByDifficulty = (tier: string) =>
+    ideas.find((i) => i.difficulty?.toLowerCase() === tier.toLowerCase());
+
+  const beginnerIdea = findByDifficulty("beginner") ?? ideas[0];
+  const intermediateIdea = findByDifficulty("intermediate") ?? ideas[1];
+  const advancedIdea = findByDifficulty("advanced") ?? ideas[2];
 
   return (
     <div className="mx-auto w-full px-4 sm:px-6 lg:px-10 xl:px-16 py-10 sm:py-16">
-      {/* Breadcrumb Navigation */}
+      {/* Breadcrumb Navigation: Home > Company > Paper title */}
       <nav aria-label="Breadcrumb" className="mb-6">
-        <ol className="flex items-center gap-2 text-xs text-muted-foreground">
+        <ol className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <li>
             <Link href="/" className="hover:text-foreground transition-colors">
               Home
@@ -144,8 +206,11 @@ export function PaperIdeasClient({ paperId }: { paperId: string }) {
               <li aria-hidden="true">/</li>
             </>
           )}
-          <li className="text-foreground font-medium truncate max-w-xs" aria-current="page">
-            Project Ideas
+          <li
+            className="text-foreground font-medium truncate max-w-xs sm:max-w-md"
+            aria-current="page"
+          >
+            {paper?.title || "Project Ideas"}
           </li>
         </ol>
       </nav>
@@ -153,31 +218,50 @@ export function PaperIdeasClient({ paperId }: { paperId: string }) {
       {/* Back button */}
       <div className="mb-8">
         <Link
-          href={paper?.company ? `/companies/${paper.company.slug}` : "/"}
+          href={paper?.company ? `/companies/${paper.company.slug}` : "/companies"}
           className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors group"
         >
-          <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
+          <ArrowLeft
+            className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5"
+            aria-hidden="true"
+          />
           <span>Back to {paper?.company ? paper.company.name : "all companies"}</span>
         </Link>
       </div>
 
-      {/* Paper Header / Details Card */}
+      {/* Paper Header / Details Card (server-rendered) */}
       {paper && (
-        <section className="rounded-2xl border border-border bg-surface p-6 sm:p-8 mb-10">
+        <section className="rounded-2xl border border-border bg-surface p-6 sm:p-8 mb-8">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
-            <div className="flex items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2.5">
               {paper.company && (
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-background">
                   <CompanyLogo slug={paper.company.slug} className="h-3.5 w-3.5" />
                 </div>
               )}
               <span className="text-xs font-medium text-muted-foreground">
-                {paper.company?.name} Research
+                {paper.company?.name || "Research"} Publication
               </span>
-              <span className="text-muted-foreground/40">&bull;</span>
-              <span className="text-xs text-muted-foreground">
-                {paper.publishedAt ? new Date(paper.publishedAt).toLocaleDateString() : ""}
-              </span>
+              {formattedPublished && (
+                <>
+                  <span className="text-muted-foreground/40">&bull;</span>
+                  <time
+                    dateTime={paper.publishedAt}
+                    className="text-xs text-muted-foreground"
+                  >
+                    {formattedPublished}
+                  </time>
+                </>
+              )}
+              {formattedLastUpdated && lastUpdatedIso && (
+                <>
+                  <span className="text-muted-foreground/40">&bull;</span>
+                  <span className="text-xs font-mono text-muted-foreground">
+                    Last updated:{" "}
+                    <time dateTime={lastUpdatedIso}>{formattedLastUpdated}</time>
+                  </span>
+                </>
+              )}
             </div>
 
             <a
@@ -187,7 +271,7 @@ export function PaperIdeasClient({ paperId }: { paperId: string }) {
               className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors shrink-0"
             >
               <span>View Original Publication</span>
-              <ExternalLink className="h-3 w-3" />
+              <ExternalLink className="h-3 w-3" aria-hidden="true" />
             </a>
           </div>
 
@@ -223,11 +307,44 @@ export function PaperIdeasClient({ paperId }: { paperId: string }) {
                     className={`h-3 w-3 transition-transform ${
                       showFullAbstract ? "rotate-180" : ""
                     }`}
+                    aria-hidden="true"
                   />
                 </button>
               )}
             </div>
           )}
+        </section>
+      )}
+
+      {/* Answer-first AEO summary block */}
+      {paper && (
+        <section
+          aria-label="Direct answer summary"
+          className="mb-10 rounded-xl border border-border/80 bg-surface/60 p-4 sm:p-5"
+        >
+          <h2 className="text-sm font-semibold text-foreground">
+            What can you build from &ldquo;{paper.title}&rdquo;?
+          </h2>
+          <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground leading-relaxed">
+            {ideas.length > 0 && beginnerIdea && intermediateIdea && advancedIdea ? (
+              <>
+                You can build three tiered engineering projects inspired by{" "}
+                {paper.company ? `${paper.company.name}'s` : "this"} publication:{" "}
+                <strong className="font-medium text-foreground">Beginner</strong> (
+                {beginnerIdea.title}),{" "}
+                <strong className="font-medium text-foreground">Intermediate</strong> (
+                {intermediateIdea.title}), and{" "}
+                <strong className="font-medium text-foreground">Advanced</strong> (
+                {advancedIdea.title}).
+              </>
+            ) : (
+              <>
+                What2Build synthesizes three tiered engineering project specifications from this
+                publication: a Beginner proof-of-concept, an Intermediate production service or
+                evaluation pipeline, and an Advanced systems architecture.
+              </>
+            )}
+          </p>
         </section>
       )}
 
@@ -237,8 +354,12 @@ export function PaperIdeasClient({ paperId }: { paperId: string }) {
           <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
             Project Implementations
           </h2>
-          <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-            3 actionable project specifications categorized by complexity
+          <p className="mt-1 flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
+            <Sparkles className="h-3.5 w-3.5 text-accent shrink-0" aria-hidden="true" />
+            <span>
+              3 AI-generated project specifications categorized by complexity from the original
+              publication
+            </span>
           </p>
         </div>
 
@@ -247,9 +368,12 @@ export function PaperIdeasClient({ paperId }: { paperId: string }) {
             type="button"
             onClick={handleRegenerate}
             disabled={regenerating}
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50 cursor-pointer shrink-0"
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-xs font-medium text-foreground hover:bg-surface-elevated transition-colors disabled:opacity-50 cursor-pointer shrink-0"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${regenerating ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`h-3.5 w-3.5 ${regenerating ? "animate-spin" : ""}`}
+              aria-hidden="true"
+            />
             <span>{regenerating ? "Regenerating..." : "Regenerate Ideas"}</span>
           </button>
         )}
@@ -282,7 +406,7 @@ export function PaperIdeasClient({ paperId }: { paperId: string }) {
               className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger/20 bg-danger/5 px-4 py-3 text-xs text-foreground"
             >
               <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-danger shrink-0" />
+                <AlertCircle className="h-4 w-4 text-danger shrink-0" aria-hidden="true" />
                 <span>{error}</span>
               </div>
               <div className="flex items-center gap-3">

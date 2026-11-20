@@ -11,7 +11,7 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
         disallow: ["/api/", "/_next/"],
       },
-      // Explicitly welcome Search & Answer Engine citation bots
+      // Explicitly allow Search & Answer Engine citation bots
       {
         userAgent: [
           "OAI-SearchBot",
@@ -24,9 +24,21 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
         disallow: ["/api/"],
       },
+      // Explicitly allow AI training/indexing crawlers for maximum AEO visibility.
+      // Note: If you prefer to block model-training bots while keeping search/citation
+      // bots above allowed, switch `allow: "/"` below to `disallow: "/"`.
+      {
+        userAgent: [
+          "GPTBot",
+          "ClaudeBot",
+          "anthropic-ai",
+          "Applebot-Extended",
+          "CCBot",
+        ],
+        allow: "/",
+        disallow: ["/api/"],
+      },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,
-    host: baseUrl,
   };
 }
-
