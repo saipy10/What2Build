@@ -21,25 +21,31 @@ import { CompanyConfig } from "@/lib/companies";
 interface CompanyResearchClientProps {
   companySlug: string;
   initialCompany: CompanyConfig;
+  initialPapers?: PaperData[];
+  initialFilterMode?: "blog" | "research";
+  lastUpdatedIso?: string | null;
   faqs: FaqItem[];
 }
 
 export function CompanyResearchClient({
   companySlug,
   initialCompany,
+  initialPapers = [],
+  initialFilterMode = "blog",
   faqs,
 }: CompanyResearchClientProps) {
   const [company, setCompany] = useState<CompanyConfig>(initialCompany);
-  const [papers, setPapers] = useState<PaperData[]>([]);
+  const [papers, setPapers] = useState<PaperData[]>(initialPapers);
   const [visibleCount, setVisibleCount] = useState(5);
-  const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(initialPapers.length >= 10);
+  const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filterMode, setFilterMode] = useState<"blog" | "research">("blog");
+  const [filterMode] = useState<"blog" | "research">(initialFilterMode);
 
   const guardRef = useRef(new LatestRequestGuard());
+  const didSkipInitialFetchRef = useRef(false);
 
   // Cancel any in-flight request on unmount.
   useEffect(() => {
@@ -75,14 +81,15 @@ export function CompanyResearchClient({
         const res = await fetch(endpoint, { method, signal });
         const data = await res.json();
 
-        // A newer request (e.g. tab switch) superseded this one: discard.
         if (!isCurrent()) return null;
-        // Defensive: never render a response meant for the other tab.
         if (data.filter && data.filter !== activeFilter) return null;
 
         if (!res.ok || !data.success) {
           throw new Error(
-            data.error || `Failed to load ${activeFilter === "research" ? "research papers" : "company blogs"}`
+            data.error ||
+              `Failed to load ${
+                activeFilter === "research" ? "research papers" : "company blogs"
+              }`
           );
         }
 
@@ -101,7 +108,10 @@ export function CompanyResearchClient({
         }
         return fetchedPapers;
       } catch (err: unknown) {
-        if (!isCurrent() || (err instanceof DOMException && err.name === "AbortError")) {
+        if (
+          !isCurrent() ||
+          (err instanceof DOMException && err.name === "AbortError")
+        ) {
           return null;
         }
         const message =
@@ -110,7 +120,9 @@ export function CompanyResearchClient({
             : "An unexpected error occurred while fetching updates.";
         setError(message);
         trackUserError({
-          errorType: force ? "company_papers_refresh_error" : "company_papers_fetch_error",
+          errorType: force
+            ? "company_papers_refresh_error"
+            : "company_papers_fetch_error",
           message,
           context: `${companySlug}:${activeFilter}`,
         });
@@ -127,6 +139,16 @@ export function CompanyResearchClient({
     [companySlug, filterMode]
   );
 
+  // Skip initial fetch when server-side initialPapers were hydrated.
+  // Only fetch on mount if SSR returned empty (e.g. cold cache fallback).
+  useEffect(() => {
+    if (didSkipInitialFetchRef.current) return;
+    didSkipInitialFetchRef.current = true;
+    if (initialPapers.length === 0) {
+      fetchPapers(false, filterMode, 10);
+    }
+  }, [fetchPapers, filterMode, initialPapers.length]);
+
   const handleShowMore = async () => {
     if (visibleCount < papers.length) {
       setVisibleCount((prev) => Math.min(prev + 5, papers.length));
@@ -142,13 +164,10 @@ export function CompanyResearchClient({
     }
   };
 
-  useEffect(() => {
-    fetchPapers(false, filterMode, 10);
-    setVisibleCount(5);
-  }, [fetchPapers, filterMode]);
+  const latestThree = papers.slice(0, 3);
 
   return (
-    <div className="mx-auto w-full px-4 sm:px-6 lg:px-10 xl:px-16 py-10 sm:py-16">
+    <div className="mx-auto w-full px-4 sm:px-6 lg:px-10 xl:px-16 pt-6 pb-12 sm:pt-8 sm:pb-16">
       {/* Header section */}
       <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-8 border-b border-border">
         <div className="flex items-start gap-4">
@@ -157,7 +176,9 @@ export function CompanyResearchClient({
           </div>
           <div>
             <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
-              {company.name}
+              {filterMode === "research"
+                ? `${company.name} Research Papers`
+                : company.name}
             </h1>
             <p className="mt-1 text-sm font-medium text-muted-foreground">
               {company.tagline}
@@ -175,57 +196,93 @@ export function CompanyResearchClient({
               href={company.blogUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+              className="inline-flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-elevated transition-colors"
             >
               <span className="inline-flex items-center gap-1.5">
-                <Newspaper className="h-3.5 w-3.5 text-muted-foreground" />
+                <Newspaper className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                 <span>Official Blog</span>
               </span>
-              <ExternalLink className="h-3 w-3 text-muted-foreground" />
+              <ExternalLink className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
             </a>
           )}
           <a
             href={company.researchUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+            className="inline-flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-elevated transition-colors"
           >
             <span className="inline-flex items-center gap-1.5">
-              <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
+              <BookOpen className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
               <span>Research Hub</span>
             </span>
-            <ExternalLink className="h-3 w-3 text-muted-foreground" />
+            <ExternalLink className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
           </a>
         </div>
       </header>
 
-      {/* Filter Tabs */}
+      {/* Answer-first AEO summary block (visually hidden) */}
+      <section
+        aria-label={`Summary of ${company.name} publications`}
+        className="sr-only"
+      >
+        <h2 className="text-sm font-semibold text-foreground">
+          What does {company.name} publish and what can you build from it?
+        </h2>
+        <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground leading-relaxed">
+          {company.name} publishes technical work on {company.tagline.toLowerCase()}. On What2Build,
+          every {filterMode === "research" ? "research paper" : "engineering post"} can be turned
+          into Beginner, Intermediate, and Advanced software projects.
+          {latestThree.length > 0 && (
+            <>
+              {" "}
+              Recent {filterMode === "research" ? "papers" : "posts"} include{" "}
+              {latestThree.map((p, idx) => {
+                const dateLabel = new Date(p.publishedAt).toLocaleDateString(
+                  "en-US",
+                  { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }
+                );
+                return (
+                  <React.Fragment key={p.id || p.sourceUrl}>
+                    {idx > 0 && (idx === latestThree.length - 1 ? ", and " : ", ")}
+                    <span className="text-foreground font-medium">{p.title}</span> ({dateLabel})
+                  </React.Fragment>
+                );
+              })}
+              .
+            </>
+          )}
+        </p>
+      </section>
+
+      {/* Filter Tabs — real crawlable links between Blog and Research routes */}
       <div className="my-8 flex items-center gap-2">
-        <div className="inline-flex rounded-lg border border-border bg-surface p-1">
-          <button
-            type="button"
-            onClick={() => setFilterMode("blog")}
-            className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+        <div className="inline-flex rounded-lg border border-border bg-surface p-1" role="tablist">
+          <Link
+            href={`/companies/${companySlug}`}
+            role="tab"
+            aria-selected={filterMode === "blog"}
+            className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
               filterMode === "blog"
                 ? "bg-foreground text-background shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <Newspaper className="h-3.5 w-3.5" />
+            <Newspaper className="h-3.5 w-3.5" aria-hidden="true" />
             <span>Engineering Blogs</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterMode("research")}
-            className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+          </Link>
+          <Link
+            href={`/companies/${companySlug}/research`}
+            role="tab"
+            aria-selected={filterMode === "research"}
+            className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
               filterMode === "research"
                 ? "bg-foreground text-background shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <BookOpen className="h-3.5 w-3.5" />
+            <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
             <span>Research Papers</span>
-          </button>
+          </Link>
         </div>
 
         <button
@@ -236,15 +293,20 @@ export function CompanyResearchClient({
           title="Sync Feed"
           className="inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
-          <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+          <RefreshCw
+            className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+            aria-hidden="true"
+          />
         </button>
       </div>
 
-      {/* Main content list */}
-      <main>
+      {/* Main content list — <section> (never nested <main>) */}
+      <section aria-label={`${company.name} ${filterMode === "research" ? "research papers" : "engineering blog posts"}`}>
         {(loading && papers.length === 0) || refreshing ? (
           <LoadingState
-            message={`Searching ${
+            type="paper"
+            count={5}
+            message={`Loading ${
               filterMode === "research" ? "research papers" : "engineering blogs"
             } for ${company.name}...`}
           />
@@ -252,7 +314,9 @@ export function CompanyResearchClient({
           <ErrorState message={error} onRetry={() => fetchPapers(false)} />
         ) : papers.length === 0 ? (
           <EmptyState
-            message={`No ${filterMode === "research" ? "research papers" : "blog posts"} found for ${company.name}.`}
+            message={`No ${
+              filterMode === "research" ? "research papers" : "blog posts"
+            } found for ${company.name}.`}
             actionLabel="Sync Latest Feed"
             onAction={() => fetchPapers(true)}
           />
@@ -264,7 +328,7 @@ export function CompanyResearchClient({
                 className="flex items-center justify-between gap-3 rounded-xl border border-danger/20 bg-danger/5 px-4 py-3 text-xs text-foreground"
               >
                 <div className="flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-danger shrink-0" />
+                  <AlertCircle className="h-4 w-4 text-danger shrink-0" aria-hidden="true" />
                   <span>{error}</span>
                 </div>
                 <button
@@ -277,12 +341,14 @@ export function CompanyResearchClient({
               </div>
             )}
 
-            {papers.slice(0, visibleCount).map((paper) => (
-              <PaperCard
+            {/* Render all fetched papers in the DOM for crawlability; progressively reveal via CSS */}
+            {papers.map((paper, idx) => (
+              <div
                 key={paper.id || paper.sourceUrl}
-                paper={paper}
-                companySlug={companySlug}
-              />
+                className={idx >= visibleCount ? "hidden" : undefined}
+              >
+                <PaperCard paper={paper} companySlug={companySlug} />
+              </div>
             ))}
 
             {visibleCount < papers.length || hasMore ? (
@@ -291,7 +357,7 @@ export function CompanyResearchClient({
                   type="button"
                   onClick={handleShowMore}
                   disabled={loadingMore}
-                  className="rounded-lg border border-border bg-surface px-5 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50 cursor-pointer"
+                  className="rounded-lg border border-border bg-surface px-5 py-2 text-xs font-medium text-foreground hover:bg-surface-elevated transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {loadingMore ? "Loading more..." : "Load More"}
                 </button>
@@ -299,7 +365,7 @@ export function CompanyResearchClient({
             ) : null}
           </div>
         )}
-      </main>
+      </section>
 
       {/* Semantic FAQ Section for Company Page */}
       <section className="mt-20 pt-10 border-t border-border">

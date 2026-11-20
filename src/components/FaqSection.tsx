@@ -49,7 +49,7 @@ export function FaqSection({
           return (
             <div
               key={idx}
-              className="rounded-xl border border-border bg-card/60 transition-colors overflow-hidden"
+              className="rounded-xl border border-border bg-surface/80 transition-colors overflow-hidden"
             >
               <h3>
                 <button
@@ -58,7 +58,7 @@ export function FaqSection({
                   aria-expanded={isOpen}
                   aria-controls={contentId}
                   onClick={() => toggle(idx)}
-                  className="w-full flex items-center justify-between p-5 text-left text-base font-medium text-foreground hover:bg-muted/50 transition-colors cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-inset"
+                  className="w-full flex items-center justify-between p-5 text-left text-base font-medium text-foreground hover:bg-surface-elevated/70 transition-colors cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-accent focus:ring-inset"
                 >
                   <span className="pr-4">{faq.question}</span>
                   <ChevronDown

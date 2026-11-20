@@ -1,13 +1,17 @@
 import React from "react";
 import type { Metadata } from "next";
 import { SUPPORTED_COMPANIES } from "@/lib/companies";
-import { SITE_CONFIG } from "@/lib/seo-config";
+import { SITE_CONFIG, getHomeFaqs } from "@/lib/seo-config";
+import { getCompanyLastUpdatedMap } from "@/lib/paperService";
 import { HomeClient } from "@/components/HomeClient";
 import { JsonLd } from "@/components/seo/JsonLd";
-import { FaqItem } from "@/components/FaqSection";
+
+export const revalidate = 1800;
 
 export const metadata: Metadata = {
-  title: `${SITE_CONFIG.name} | ${SITE_CONFIG.tagline}`,
+  title: {
+    absolute: `${SITE_CONFIG.name} | ${SITE_CONFIG.tagline}`,
+  },
   description: SITE_CONFIG.description,
   alternates: {
     canonical: SITE_CONFIG.url,
@@ -27,74 +31,65 @@ export const metadata: Metadata = {
   },
 };
 
-const HOME_FAQS: FaqItem[] = [
-  {
-    question: "What is What2Build and who is it designed for?",
-    answer:
-      "What2Build is an open engineering portal for software developers, ML engineers, and computer science students. It continuously tracks newly published research papers and technical blogs from frontier AI organizations (like OpenAI, Google DeepMind, Anthropic, and Meta) and converts them into practical, step-by-step engineering projects.",
-  },
-  {
-    question: "How does What2Build generate project ideas from AI research papers?",
-    answer:
-      "Our system reads official preprints from arXiv and engineering blog feeds, extracts core algorithmic innovations and architectures, and utilizes state-of-the-art language models to produce 3 structured project specifications categorized by difficulty: Beginner (proofs-of-concept), Intermediate (evaluations and microservices), and Advanced (distributed systems and custom architectures).",
-  },
-  {
-    question: "Which frontier AI labs and companies are currently supported?",
-    answer:
-      "We currently monitor top tier AI labs including OpenAI, Google DeepMind, Anthropic, Meta AI, Mistral AI, Cohere, Microsoft Research, Apple Machine Learning, and NVIDIA Research.",
-  },
-  {
-    question: "Are the suggested project ideas suitable for developer portfolios?",
-    answer:
-      "Yes. Each project idea provides recommended tech stacks, core architectural challenges, concrete deliverables, and extension opportunities designed to demonstrate production engineering skills to hiring managers and technical recruiters.",
-  },
-  {
-    question: "Is What2Build free to use?",
-    answer:
-      "Yes, What2Build is freely accessible to explore research feeds and view AI-generated project plans for developers building portfolio projects.",
-  },
-  {
-    question: "Can I filter between academic research papers and engineering blog posts?",
-    answer:
-      "Yes. On every company hub page, you can toggle between 'Engineering Blogs' (real-world system architecture, scaling posts) and 'Research Papers' (peer-reviewed papers and arXiv preprints).",
-  },
-];
-
-export default function HomePage() {
+export default async function HomePage() {
   const companies = Object.values(SUPPORTED_COMPANIES);
+  const homeFaqs = getHomeFaqs();
 
-  // Structured Data Schema for Organization, WebSite, and FAQPage
-  const jsonLdItems = [
+  let lastUpdatedIso: string | null = null;
+  try {
+    const updatedMap = await getCompanyLastUpdatedMap();
+    const timestamps = Object.values(updatedMap).map((d) => d.getTime());
+    if (timestamps.length > 0) {
+      lastUpdatedIso = new Date(Math.max(...timestamps)).toISOString();
+    }
+  } catch {
+    // Gracefully omit when database is unavailable
+  }
+
+  const jsonLdItems: Record<string, unknown>[] = [
     {
       "@type": "Organization",
       "@id": `${SITE_CONFIG.url}/#organization`,
       name: SITE_CONFIG.name,
       url: SITE_CONFIG.url,
       description: SITE_CONFIG.description,
-      logo: `${SITE_CONFIG.url}/favicon.svg`,
-      sameAs: [SITE_CONFIG.social.github, SITE_CONFIG.social.twitter],
+      logo: {
+        "@type": "ImageObject",
+        url: `${SITE_CONFIG.url}/icon-512.png`,
+        width: 512,
+        height: 512,
+      },
+      ...(SITE_CONFIG.social.sameAs.length > 0
+        ? { sameAs: SITE_CONFIG.social.sameAs }
+        : {}),
     },
     {
       "@type": "WebSite",
       "@id": `${SITE_CONFIG.url}/#website`,
       name: SITE_CONFIG.name,
       url: SITE_CONFIG.url,
+      description: SITE_CONFIG.description,
       publisher: {
         "@id": `${SITE_CONFIG.url}/#organization`,
       },
-      potentialAction: {
-        "@type": "SearchAction",
-        target: {
-          "@type": "EntryPoint",
-          urlTemplate: `${SITE_CONFIG.url}/companies/{search_term_string}`,
-        },
-        "query-input": "required name=search_term_string",
-      },
+    },
+    {
+      "@type": "ItemList",
+      "@id": `${SITE_CONFIG.url}/#companies`,
+      name: "Supported AI Research Labs & Engineering Organizations",
+      numberOfItems: companies.length,
+      itemListElement: companies.map((company, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        name: company.name,
+        url: `${SITE_CONFIG.url}/companies/${company.slug}`,
+        description: company.tagline,
+      })),
     },
     {
       "@type": "FAQPage",
       "@id": `${SITE_CONFIG.url}/#faq`,
-      mainEntity: HOME_FAQS.map((faq) => ({
+      mainEntity: homeFaqs.map((faq) => ({
         "@type": "Question",
         name: faq.question,
         acceptedAnswer: {
@@ -108,8 +103,12 @@ export default function HomePage() {
   return (
     <>
       <JsonLd items={jsonLdItems} />
-      <div className="relative mx-auto w-full px-4 sm:px-6 lg:px-10 xl:px-16 py-16 sm:py-24">
-        <HomeClient companies={companies} faqs={HOME_FAQS} />
+      <div className="relative mx-auto w-full px-4 sm:px-6 lg:px-10 xl:px-16 pt-8 pb-16 sm:pt-12 sm:pb-24">
+        <HomeClient
+          companies={companies}
+          faqs={homeFaqs}
+          lastUpdatedIso={lastUpdatedIso}
+        />
       </div>
     </>
   );

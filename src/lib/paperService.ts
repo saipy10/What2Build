@@ -285,9 +285,10 @@ export async function getPaperById(paperId: string) {
           sourceUrl: paper.source_url,
           externalId: paper.external_id,
           category: paper.category,
-          contentType: paper.content_type,
+          contentType: paper.content_type as "blog" | "research" | null | undefined,
           createdAt: new Date(paper.created_at),
           updatedAt: new Date(paper.updated_at),
+          persisted: true,
           company: paper.companies
             ? {
                 id: paper.companies.id,
@@ -310,6 +311,7 @@ export async function getPaperById(paperId: string) {
     const compConfig = SUPPORTED_COMPANIES[rawSlug];
     return {
       ...memPaper,
+      persisted: false,
       company: compConfig
         ? {
             id: compConfig.slug,
@@ -329,4 +331,252 @@ export async function getPaperById(paperId: string) {
   }
 
   return null;
+}
+
+export interface CachedProjectIdea {
+  id: string;
+  paperId: string;
+  title: string;
+  description: string;
+  features: string[];
+  skills: string[];
+  technologies: string[];
+  difficulty: string;
+  researchConnection: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getCachedIdeasForPaper(
+  paperId: string
+): Promise<CachedProjectIdea[]> {
+  if (supabaseAdmin) {
+    try {
+      const { data: ideas, error } = await supabaseAdmin
+        .from("project_ideas")
+        .select("*")
+        .eq("paper_id", paperId)
+        .order("created_at", { ascending: true });
+
+      if (!error && ideas && ideas.length > 0) {
+        return ideas.map((i) => ({
+          id: i.id,
+          paperId: i.paper_id,
+          title: i.title,
+          description: i.description,
+          features: i.features || [],
+          skills: i.skills || [],
+          technologies: i.technologies || [],
+          difficulty: i.difficulty,
+          researchConnection: i.research_connection || "",
+          createdAt: new Date(i.created_at).toISOString(),
+          updatedAt: new Date(i.updated_at || i.created_at).toISOString(),
+        }));
+      }
+    } catch (err) {
+      console.warn("Supabase error in getCachedIdeasForPaper:", err);
+    }
+  }
+
+  const memIdeas = memoryDb.getIdeasByPaperId(paperId);
+  return memIdeas.map((i) => ({
+    id: i.id,
+    paperId: i.paperId,
+    title: i.title,
+    description: i.description,
+    features: i.features || [],
+    skills: i.skills || [],
+    technologies: i.technologies || [],
+    difficulty: i.difficulty,
+    researchConnection: i.researchConnection || "",
+    createdAt: i.createdAt.toISOString(),
+    updatedAt: i.updatedAt.toISOString(),
+  }));
+}
+
+/**
+ * Returns the most recent `updated_at` timestamp per company slug from Supabase
+ * (falling back to in-memory refresh timestamps if Supabase is unavailable).
+ */
+export async function getCompanyLastUpdatedMap(): Promise<Record<string, Date>> {
+  const result: Record<string, Date> = {};
+
+  if (supabaseAdmin) {
+    try {
+      const { data: companies, error } = await supabaseAdmin
+        .from("companies")
+        .select("id, slug, updated_at");
+
+      if (!error && companies) {
+        const companyIdToSlug = new Map<string, string>();
+        for (const c of companies) {
+          if (c.slug) {
+            companyIdToSlug.set(c.id, c.slug);
+            if (c.updated_at) {
+              result[c.slug] = new Date(c.updated_at);
+            }
+          }
+        }
+
+        const { data: latestPapers } = await supabaseAdmin
+          .from("papers")
+          .select("company_id, updated_at")
+          .order("updated_at", { ascending: false })
+          .limit(500);
+
+        if (latestPapers) {
+          for (const row of latestPapers) {
+            const slug = companyIdToSlug.get(row.company_id);
+            if (!slug || !row.updated_at) continue;
+            const ts = new Date(row.updated_at);
+            if (!result[slug] || ts.getTime() > result[slug].getTime()) {
+              result[slug] = ts;
+            }
+          }
+        }
+
+        return result;
+      }
+    } catch (err) {
+      console.warn("Supabase error in getCompanyLastUpdatedMap:", err);
+    }
+  }
+
+  for (const slug of Object.keys(SUPPORTED_COMPANIES)) {
+    const blogTs = memoryDb.getLastRefreshed(`${slug}:blog`);
+    const researchTs = memoryDb.getLastRefreshed(`${slug}:research`);
+    const latest =
+      blogTs && researchTs
+        ? blogTs > researchTs
+          ? blogTs
+          : researchTs
+        : blogTs || researchTs;
+    if (latest) {
+      result[slug] = latest;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Returns persisted Supabase paper IDs that have at least one cached project idea,
+ * suitable for inclusion in sitemap.xml.
+ */
+export async function getIndexablePapersForSitemap(
+  limit = 5000
+): Promise<Array<{ id: string; updatedAt: Date }>> {
+  if (!supabaseAdmin) return [];
+
+  try {
+    const { data: ideaRows, error } = await supabaseAdmin
+      .from("project_ideas")
+      .select("paper_id, updated_at, created_at")
+      .order("updated_at", { ascending: false })
+      .limit(limit * 3);
+
+    if (error || !ideaRows) return [];
+
+    const byPaper = new Map<string, Date>();
+    for (const row of ideaRows) {
+      if (!row.paper_id) continue;
+      const ts = new Date(row.updated_at || row.created_at || Date.now());
+      const existing = byPaper.get(row.paper_id);
+      if (!existing || ts.getTime() > existing.getTime()) {
+        byPaper.set(row.paper_id, ts);
+      }
+      if (byPaper.size >= limit) break;
+    }
+
+    return Array.from(byPaper.entries()).map(([id, updatedAt]) => ({
+      id,
+      updatedAt,
+    }));
+  } catch (err) {
+    console.warn("Supabase error in getIndexablePapersForSitemap:", err);
+    return [];
+  }
+}
+
+export interface FeedPaperItem {
+  id: string;
+  title: string;
+  description: string;
+  sourceUrl: string;
+  publishedAt: Date;
+  updatedAt: Date;
+  contentType: "blog" | "research";
+  companySlug: string;
+  companyName: string;
+  persisted: boolean;
+}
+
+/**
+ * Returns latest cached papers across all companies for RSS (/feed.xml) and /llms-full.txt.
+ * Does not trigger live crawls so these endpoints stay fast and cacheable.
+ */
+export async function getLatestCachedPapers(limit = 40): Promise<FeedPaperItem[]> {
+  if (supabaseAdmin) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from("papers")
+        .select("id, title, description, source_url, published_at, updated_at, content_type, companies(slug, name)")
+        .order("published_at", { ascending: false })
+        .limit(limit);
+
+      if (!error && data && data.length > 0) {
+        return data
+          .map((row) => {
+            const comp = Array.isArray(row.companies)
+              ? row.companies[0]
+              : row.companies;
+            const slug = comp?.slug || "";
+            const name = comp?.name || SUPPORTED_COMPANIES[slug]?.name || slug;
+            return {
+              id: row.id,
+              title: row.title,
+              description: row.description || "",
+              sourceUrl: row.source_url,
+              publishedAt: new Date(row.published_at),
+              updatedAt: new Date(row.updated_at || row.published_at),
+              contentType: (row.content_type === "research" ? "research" : "blog") as
+                | "blog"
+                | "research",
+              companySlug: slug,
+              companyName: name,
+              persisted: true,
+            };
+          })
+          .filter((item) => Boolean(item.companySlug));
+      }
+    } catch (err) {
+      console.warn("Supabase error in getLatestCachedPapers:", err);
+    }
+  }
+
+  // Fallback to whatever is currently in memoryDb
+  const memItems: FeedPaperItem[] = [];
+  for (const comp of Object.values(SUPPORTED_COMPANIES)) {
+    for (const mode of ["blog", "research"] as const) {
+      const papers = memoryDb.getPapersByCompany(`${comp.slug}:${mode}`);
+      for (const p of papers) {
+        memItems.push({
+          id: p.id,
+          title: p.title,
+          description: p.description || "",
+          sourceUrl: p.sourceUrl,
+          publishedAt: p.publishedAt,
+          updatedAt: p.updatedAt,
+          contentType: mode,
+          companySlug: comp.slug,
+          companyName: comp.name,
+          persisted: false,
+        });
+      }
+    }
+  }
+
+  return memItems
+    .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())
+    .slice(0, limit);
 }

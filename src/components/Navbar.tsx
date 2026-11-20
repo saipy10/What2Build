@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Search, ChevronDown, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { SUPPORTED_COMPANIES } from "@/lib/companies";
-import { CompanyLogo, GitHubLogo, AppBulbLogo } from "@/components/CompanyLogos";
+import { CompanyLogo, AppBulbLogo } from "@/components/CompanyLogos";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Navbar() {
@@ -180,15 +180,6 @@ export function Navbar() {
 
         {/* Right side navigation & Theme Toggle */}
         <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-          <a
-            href={process.env.NEXT_PUBLIC_REPO_URL || "https://github.com/saipy10/What2Build"}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="GitHub Repository"
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-elevated transition-colors"
-          >
-            <GitHubLogo className="h-4 w-4" />
-          </a>
           <ThemeToggle />
         </div>
       </div>

@@ -1,11 +1,17 @@
 "use client";
 
 import React from "react";
+import dynamic from "next/dynamic";
 import { AlertCircle, Inbox, RefreshCw } from "lucide-react";
-import { DotLottieReact, setWasmUrl } from "@lottiefiles/dotlottie-react";
-import { ProjectIdeaCardSkeleton } from "./Skeleton";
+import { PaperCardSkeleton, ProjectIdeaCardSkeleton, Skeleton } from "./Skeleton";
 
-setWasmUrl("/dotlottie-player.wasm");
+const LottieLoader = dynamic(
+  () => import("./LottieLoader").then((mod) => mod.LottieLoader),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="w-full h-full rounded-xl" />,
+  }
+);
 
 export function LoadingState({
   message = "Loading...",
@@ -13,10 +19,10 @@ export function LoadingState({
   count = 3,
 }: {
   message?: string;
-  type?: "paper" | "idea";
+  type?: "paper" | "idea" | "lottie";
   count?: number;
 }) {
-  if (type === "paper") {
+  if (type === "lottie") {
     return (
       <div
         role="status"
@@ -24,12 +30,7 @@ export function LoadingState({
         className="flex flex-col items-center justify-center rounded-2xl border border-border bg-surface px-4 py-12 sm:px-8 sm:py-16 md:py-20 text-center"
       >
         <div className="w-full max-w-[200px] sm:max-w-[260px] md:max-w-[300px] aspect-[350/250] flex items-center justify-center">
-          <DotLottieReact
-            src="/search.lottie"
-            loop
-            autoplay
-            className="w-full h-full"
-          />
+          <LottieLoader src="/search.lottie" />
         </div>
         <p className="mt-4 text-xs sm:text-sm font-mono text-muted-foreground max-w-xs sm:max-w-md">
           {message}
@@ -38,8 +39,23 @@ export function LoadingState({
     );
   }
 
+  if (type === "paper") {
+    return (
+      <div role="status" aria-live="polite" className="space-y-4">
+        <div className="text-xs font-mono text-muted-foreground pb-1">
+          {message}
+        </div>
+        <div className="space-y-4">
+          {Array.from({ length: count }).map((_, i) => (
+            <PaperCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
+    <div role="status" aria-live="polite" className="space-y-4">
       <div className="text-xs font-mono text-muted-foreground pb-1">
         {message}
       </div>
@@ -67,7 +83,9 @@ export function ErrorState({
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center rounded-xl border border-danger/20 bg-danger/5">
       <AlertCircle className="h-8 w-8 text-danger mb-3" />
       <h3 className="text-base font-medium text-foreground">{title}</h3>
-      <p className="text-sm text-muted-foreground max-w-md mt-1 mb-5 leading-relaxed">{message}</p>
+      <p className="text-sm text-muted-foreground max-w-md mt-1 mb-5 leading-relaxed">
+        {message}
+      </p>
       {onRetry && (
         <button
           onClick={onRetry}
@@ -96,7 +114,9 @@ export function EmptyState({
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center rounded-xl border border-border bg-surface">
       <Inbox className="h-8 w-8 text-muted-foreground mb-3" />
       <h3 className="text-base font-medium text-foreground">{title}</h3>
-      <p className="text-sm text-muted-foreground max-w-md mt-1 mb-5 leading-relaxed">{message}</p>
+      <p className="text-sm text-muted-foreground max-w-md mt-1 mb-5 leading-relaxed">
+        {message}
+      </p>
       {onAction && actionLabel && (
         <button
           onClick={onAction}

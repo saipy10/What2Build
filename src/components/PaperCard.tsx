@@ -112,10 +112,13 @@ export function PaperCard({ paper }: PaperCardProps) {
         <div className="shrink-0 flex items-center sm:justify-end">
           <Link
             href={`/papers/${encodeURIComponent(paper.id)}/ideas`}
+            aria-label={`Project ideas for ${paper.title}`}
             className="group/btn inline-flex items-center justify-center gap-1.5 rounded-lg bg-surface-elevated border border-border px-3.5 py-2 text-xs font-medium text-foreground transition-colors hover:border-blue-600 hover:bg-blue-600 hover:text-white"
           >
-            <Lightbulb className="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover/btn:text-white" />
-            <span>Ideas</span>
+            <Lightbulb className="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover/btn:text-white" aria-hidden="true" />
+            <span>
+              Ideas<span className="sr-only"> for {paper.title}</span>
+            </span>
           </Link>
         </div>
       </div>
