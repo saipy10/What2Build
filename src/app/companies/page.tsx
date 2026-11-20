@@ -81,21 +81,7 @@ export default function CompaniesHubPage() {
   return (
     <>
       <JsonLd items={jsonLdItems} />
-      <div className="mx-auto w-full px-4 sm:px-6 lg:px-10 xl:px-16 py-10 sm:py-16">
-        <nav aria-label="Breadcrumb" className="mb-6">
-          <ol className="flex items-center gap-2 text-xs text-muted-foreground">
-            <li>
-              <Link href="/" className="hover:text-foreground transition-colors">
-                Home
-              </Link>
-            </li>
-            <li aria-hidden="true">/</li>
-            <li className="text-foreground font-medium" aria-current="page">
-              Companies
-            </li>
-          </ol>
-        </nav>
-
+      <div className="mx-auto w-full px-4 sm:px-6 lg:px-10 xl:px-16 pt-6 pb-12 sm:pt-8 sm:pb-16">
         <header className="max-w-3xl pb-8 border-b border-border">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-foreground">
             AI Labs &amp; Engineering Organizations

@@ -103,7 +103,7 @@ export default async function HomePage() {
   return (
     <>
       <JsonLd items={jsonLdItems} />
-      <div className="relative mx-auto w-full px-4 sm:px-6 lg:px-10 xl:px-16 py-16 sm:py-24">
+      <div className="relative mx-auto w-full px-4 sm:px-6 lg:px-10 xl:px-16 pt-8 pb-16 sm:pt-12 sm:pb-24">
         <HomeClient
           companies={companies}
           faqs={homeFaqs}

@@ -108,6 +108,11 @@ export default function RootLayout({
       className={`${inter.variable} ${geistMono.variable}`}
     >
       <body className="min-h-screen bg-background text-foreground antialiased flex flex-col font-sans selection:bg-accent selection:text-accent-foreground">
+        {/* Global subtle dot grid background */}
+        <div
+          className="pointer-events-none fixed inset-0 -z-10 [background-image:radial-gradient(currentColor_1px,transparent_1px)] [background-size:24px_24px] text-foreground opacity-[0.035]"
+          aria-hidden="true"
+        />
         {/* Accessible Skip to Content Link */}
         <a
           href="#main-content"
@@ -144,14 +149,6 @@ export default function RootLayout({
                   <Link href="/feed.xml" className="hover:text-foreground transition-colors">
                     RSS Feed
                   </Link>
-                  <a
-                    href={SITE_CONFIG.social.github}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-foreground transition-colors"
-                  >
-                    GitHub
-                  </a>
                 </div>
               </div>
               <div className="mt-8 pt-6 border-t border-border/40 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">

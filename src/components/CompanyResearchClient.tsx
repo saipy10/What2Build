@@ -32,7 +32,6 @@ export function CompanyResearchClient({
   initialCompany,
   initialPapers = [],
   initialFilterMode = "blog",
-  lastUpdatedIso = null,
   faqs,
 }: CompanyResearchClientProps) {
   const [company, setCompany] = useState<CompanyConfig>(initialCompany);
@@ -166,55 +165,9 @@ export function CompanyResearchClient({
   };
 
   const latestThree = papers.slice(0, 3);
-  const formattedLastUpdated = lastUpdatedIso
-    ? new Date(lastUpdatedIso).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        timeZone: "UTC",
-      })
-    : null;
 
   return (
-    <div className="mx-auto w-full px-4 sm:px-6 lg:px-10 xl:px-16 py-10 sm:py-16">
-      {/* Breadcrumb Navigation */}
-      <nav aria-label="Breadcrumb" className="mb-6">
-        <ol className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <li>
-            <Link href="/" className="hover:text-foreground transition-colors">
-              Home
-            </Link>
-          </li>
-          <li aria-hidden="true">/</li>
-          <li>
-            <Link href="/companies" className="hover:text-foreground transition-colors">
-              Companies
-            </Link>
-          </li>
-          <li aria-hidden="true">/</li>
-          {filterMode === "research" ? (
-            <>
-              <li>
-                <Link
-                  href={`/companies/${company.slug}`}
-                  className="hover:text-foreground transition-colors"
-                >
-                  {company.name}
-                </Link>
-              </li>
-              <li aria-hidden="true">/</li>
-              <li className="text-foreground font-medium" aria-current="page">
-                Research Papers
-              </li>
-            </>
-          ) : (
-            <li className="text-foreground font-medium" aria-current="page">
-              {company.name}
-            </li>
-          )}
-        </ol>
-      </nav>
-
+    <div className="mx-auto w-full px-4 sm:px-6 lg:px-10 xl:px-16 pt-6 pb-12 sm:pt-8 sm:pb-16">
       {/* Header section */}
       <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-8 border-b border-border">
         <div className="flex items-start gap-4">
@@ -233,12 +186,6 @@ export function CompanyResearchClient({
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed max-w-2xl">
               {company.description}
             </p>
-            {formattedLastUpdated && lastUpdatedIso && (
-              <p className="mt-2 text-xs font-mono text-muted-foreground">
-                Last updated:{" "}
-                <time dateTime={lastUpdatedIso}>{formattedLastUpdated}</time>
-              </p>
-            )}
           </div>
         </div>
 

@@ -42,7 +42,6 @@ export function PaperIdeasClient({
   paperId,
   initialPaper = null,
   initialIdeas = [],
-  lastUpdatedIso = null,
 }: PaperIdeasClientProps) {
   const [paper, setPaper] = useState<PaperDetails | null>(initialPaper);
   const [ideas, setIdeas] = useState<ProjectIdeaData[]>(initialIdeas);
@@ -166,15 +165,6 @@ export function PaperIdeasClient({
       })
     : "";
 
-  const formattedLastUpdated = lastUpdatedIso
-    ? new Date(lastUpdatedIso).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        timeZone: "UTC",
-      })
-    : null;
-
   const findByDifficulty = (tier: string) =>
     ideas.find((i) => i.difficulty?.toLowerCase() === tier.toLowerCase());
 
@@ -183,40 +173,9 @@ export function PaperIdeasClient({
   const advancedIdea = findByDifficulty("advanced") ?? ideas[2];
 
   return (
-    <div className="mx-auto w-full px-4 sm:px-6 lg:px-10 xl:px-16 py-10 sm:py-16">
-      {/* Breadcrumb Navigation: Home > Company > Paper title */}
-      <nav aria-label="Breadcrumb" className="mb-6">
-        <ol className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <li>
-            <Link href="/" className="hover:text-foreground transition-colors">
-              Home
-            </Link>
-          </li>
-          <li aria-hidden="true">/</li>
-          {paper?.company && (
-            <>
-              <li>
-                <Link
-                  href={`/companies/${paper.company.slug}`}
-                  className="hover:text-foreground transition-colors"
-                >
-                  {paper.company.name}
-                </Link>
-              </li>
-              <li aria-hidden="true">/</li>
-            </>
-          )}
-          <li
-            className="text-foreground font-medium truncate max-w-xs sm:max-w-md"
-            aria-current="page"
-          >
-            {paper?.title || "Project Ideas"}
-          </li>
-        </ol>
-      </nav>
-
+    <div className="mx-auto w-full px-4 sm:px-6 lg:px-10 xl:px-16 pt-6 pb-12 sm:pt-8 sm:pb-16">
       {/* Back button */}
-      <div className="mb-8">
+      <div className="mb-6">
         <Link
           href={paper?.company ? `/companies/${paper.company.slug}` : "/companies"}
           className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors group"
@@ -251,15 +210,6 @@ export function PaperIdeasClient({
                   >
                     {formattedPublished}
                   </time>
-                </>
-              )}
-              {formattedLastUpdated && lastUpdatedIso && (
-                <>
-                  <span className="text-muted-foreground/40">&bull;</span>
-                  <span className="text-xs font-mono text-muted-foreground">
-                    Last updated:{" "}
-                    <time dateTime={lastUpdatedIso}>{formattedLastUpdated}</time>
-                  </span>
                 </>
               )}
             </div>
@@ -316,11 +266,11 @@ export function PaperIdeasClient({
         </section>
       )}
 
-      {/* Answer-first AEO summary block */}
+      {/* Answer-first AEO summary block (visually hidden) */}
       {paper && (
         <section
           aria-label="Direct answer summary"
-          className="mb-10 rounded-xl border border-border/80 bg-surface/60 p-4 sm:p-5"
+          className="sr-only"
         >
           <h2 className="text-sm font-semibold text-foreground">
             What can you build from &ldquo;{paper.title}&rdquo;?

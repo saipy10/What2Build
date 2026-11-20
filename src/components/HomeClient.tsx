@@ -15,7 +15,7 @@ interface HomeClientProps {
   lastUpdatedIso?: string | null;
 }
 
-export function HomeClient({ companies, faqs, lastUpdatedIso }: HomeClientProps) {
+export function HomeClient({ companies, faqs }: HomeClientProps) {
   const [showHowItWorks, setShowHowItWorks] = useState(false);
 
   useEffect(() => {
@@ -34,23 +34,8 @@ export function HomeClient({ companies, faqs, lastUpdatedIso }: HomeClientProps)
     .map((c) => c.name)
     .join(", ");
 
-  const formattedLastUpdated = lastUpdatedIso
-    ? new Date(lastUpdatedIso).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        timeZone: "UTC",
-      })
-    : null;
-
   return (
     <>
-      {/* Subtle hero dot grid */}
-      <div
-        className="pointer-events-none absolute inset-0 -z-10 [background-image:radial-gradient(currentColor_1px,transparent_1px)] [background-size:24px_24px] text-foreground opacity-[0.035]"
-        aria-hidden="true"
-      />
-
       {/* Hero Section — rendered without opacity:0 Reveal so LCP & H1 paint immediately */}
       <section className="mb-16 sm:mb-20 max-w-3xl">
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-[-0.02em] text-foreground leading-[1.1]">
@@ -70,13 +55,6 @@ export function HomeClient({ companies, faqs, lastUpdatedIso }: HomeClientProps)
           {companies.length} leading organizations—including {featuredCompanyNames}—and generates
           Beginner, Intermediate, and Advanced build specifications from real publications.
         </p>
-
-        {formattedLastUpdated && lastUpdatedIso && (
-          <p className="mt-2.5 text-xs font-mono text-muted-foreground">
-            Last updated:{" "}
-            <time dateTime={lastUpdatedIso}>{formattedLastUpdated}</time>
-          </p>
-        )}
 
         <div className="mt-7 flex flex-wrap items-center gap-4">
           <a
